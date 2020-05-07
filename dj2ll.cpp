@@ -1,6 +1,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
+#include <string>
 
 #include "ast.h"
 #include "symtbl.h"
@@ -16,11 +18,10 @@ int main(int argc, char **argv) {
     printf("Usage: %s filename\n", argv[0]);
     exit(-1);
   }
-  // mostly taken from https://stackoverflow.com/a/5309508
-  char *dot = strrchr(argv[1], '.');
-  // TODO: actually implement the extension-checking
-  if (!dot || dot == argv[1]) {
-    printf("ERROR: %s must be called on files ending with \".dj\"\n", argv[1]);
+  std::string fileName = argv[1];
+  std::string extension = fileName.substr(fileName.size() - 3, fileName.size());
+  if (extension != ".dj") {
+    printf("ERROR: %s must be called on files ending with \".dj\"\n", argv[0]);
     exit(-1);
   }
   yyin = fopen(argv[1], "r");
@@ -32,14 +33,5 @@ int main(int argc, char **argv) {
   yyparse();
   setupSymbolTables(pgmAST);
   typecheckProgram();
-
-  char output[1024];
-  strncpy(output, argv[1], (dot - argv[1] + 1));
-  strcat(output, "dism\0");
-
-  FILE *outputFile = fopen(output, "w");
-
-  fclose(outputFile);
-
   return 0;
 }
