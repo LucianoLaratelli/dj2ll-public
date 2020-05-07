@@ -11,11 +11,11 @@ dj2ll: dj.tab.c lex.yy.c ast.c symtbl.c typecheck.c codegen.cpp
 	$(CXX) $(CFLAGS) --std=c++11 ast.o symtbl.o typecheck.o dj.tab.o dj2ll.cpp codegen.cpp -o dj2ll
 
 dj.tab.c: dj.y
-	bison -v dj.y
+	bison dj.y
 	sed -i '/extern YYSTYPE yylval/d' dj.tab.c
 
 lex.yy.c: dj.l
 	flex dj.l
 
 clean:
-	rm dj2ll dj.tab.c lex.yy.c
+	rm dj2ll dj.tab.c lex.yy.c *.o
