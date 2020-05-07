@@ -29,8 +29,8 @@ int main(int argc, char **argv) {
     printf("ERROR: could not open file %s\n", argv[1]);
     exit(-1);
   }
-  /* parse the input program */
   yyparse();
+  fclose(yyin);
   setupSymbolTables(pgmAST);
   typecheckProgram();
   return 0;
