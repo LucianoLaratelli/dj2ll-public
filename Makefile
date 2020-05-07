@@ -1,14 +1,21 @@
 all: dj2ll
-debug: djdebug
 CC=gcc
 CXX=g++
-CFLAGS=-Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual -Wno-missing-braces -pedantic
+CFLAGS=-O2
+ANNOY=-pedantic
+WFLAGS=-Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual -Wno-missing-braces
 DFLAGS=-ggdb3 -O0
 
+CSOURCES=ast.c symtbl.c typecheck.c util.c dj.tab.c
+CXXSOURCES=codegen.cpp dj2ll.cpp
 
-dj2ll: dj.tab.c lex.yy.c ast.c symtbl.c typecheck.c codegen.cpp dj2ll.cpp
-	$(CC) $(CFLAGS) -c ast.c symtbl.c typecheck.c dj.tab.c
-	$(CXX) $(CFLAGS) --std=c++11 ast.o symtbl.o typecheck.o dj.tab.o dj2ll.cpp codegen.cpp -o dj2ll
+dj2ll: lex.yy.c $(CSOURCES) $(CXXSOURCES)
+	$(CC)  $(CFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
+	$(CXX) $(CFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 *.o $(CXXSOURCES) -o dj2ll
+
+debug: lex.yy.c $(CSOURCES) $(CXXSOURCES)
+	$(CC)  $(DFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
+	$(CXX) $(DFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 *.o $(CXXSOURCES) -o dj2ll
 
 dj.tab.c: dj.y
 	bison dj.y
@@ -17,5 +24,7 @@ dj.tab.c: dj.y
 lex.yy.c: dj.l
 	flex dj.l
 
+.PHONY: clean
+
 clean:
-	rm dj2ll dj.tab.c lex.yy.c *.o
+	@rm -f $(TARGET) $(OBJECTS)
