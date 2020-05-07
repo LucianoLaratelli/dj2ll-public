@@ -6,7 +6,7 @@ CFLAGS=-Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith 
 DFLAGS=-ggdb3 -O0
 
 
-dj2ll: dj.tab.c lex.yy.c ast.c symtbl.c typecheck.c codegen.cpp
+dj2ll: dj.tab.c lex.yy.c ast.c symtbl.c typecheck.c codegen.cpp dj2ll.cpp
 	$(CC) $(CFLAGS) -c ast.c symtbl.c typecheck.c dj.tab.c
 	$(CXX) $(CFLAGS) --std=c++11 ast.o symtbl.o typecheck.o dj.tab.o dj2ll.cpp codegen.cpp -o dj2ll
 
