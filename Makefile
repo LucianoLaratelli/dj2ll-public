@@ -1,14 +1,14 @@
 all: dj2ll
 debug: djdebug
-CFLAGS=-Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual -Wno-missing-braces -pedantic --std=c++11
+CC=gcc
+CXX=g++
+CFLAGS=-Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual -Wno-missing-braces -pedantic
 DFLAGS=-ggdb3 -O0
 
 
-dj2dism: dj.tab.c lex.yy.c ast.c symtbl.c typecheck.c codegen.c
-	gcc $(CFLAGS) -o dj2dism dj.tab.c ast.c symtbl.c typecheck.c codegen.c
-
-djdebug: dj.tab.c lex.yy.c ast.c symtbl.c typecheck.c codegen.c
-	gcc $(CFLAGS) $(DFLAGS) -o dj2dism dj.tab.c ast.c symtbl.c typecheck.c codegen.c
+dj2ll: dj.tab.c lex.yy.c ast.c symtbl.c typecheck.c codegen.cpp
+	$(CC) $(CFLAGS) -c ast.c symtbl.c typecheck.c dj.tab.c
+	$(CXX) $(CFLAGS) --std=c++11 ast.o symtbl.o typecheck.o dj.tab.o dj2ll.cpp codegen.cpp -o dj2ll
 
 dj.tab.c: dj.y
 	bison -v dj.y
