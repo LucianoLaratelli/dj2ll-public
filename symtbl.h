@@ -1,4 +1,6 @@
 /* File symtbl.h: Enhanced symbol-table data structures for DJ */
+/*Copyright Dr. Ligatti, 2007 - 2020, USF*/
+/*Some modifications by Luciano Laratelli*/
 
 #ifndef SYMTBL_H
 #define SYMTBL_H
