@@ -1,10 +1,16 @@
+.PHONY: all
+.PHONY: clean
 all: dj2ll
-CC=gcc
-CXX=g++
+CC=clang
+CXX=clang++
 CFLAGS=-O2
 ANNOY=-pedantic
-WFLAGS=-Wall -Wextra -Wformat=2 -Wno-format-nonliteral -Wshadow -Wpointer-arith -Wcast-qual -Wno-missing-braces
 DFLAGS=-ggdb3 -O0
+WFLAGS=-Qunused-arguments -Qunused-arguments -Wall -Wpointer-arith -Woverloaded-virtual\
+	   -Werror=return-type -Werror=int-to-pointer-cast -Wtype-limits -Wempty-body\
+	   -Wsign-compare -Wno-invalid-offsetof -Wno-c++0x-extensions -Wno-extended-offsetof\
+	   -Wno-unknown-warning-option -Wno-return-type-c-linkage -Wno-mismatched-tags\
+	   -Wno-error=uninitialized -Wno-error=deprecated-declarations\
 
 CSOURCES=ast.c symtbl.c typecheck.c util.c dj.tab.c
 CXXSOURCES=codegen.cpp dj2ll.cpp
@@ -24,7 +30,6 @@ dj.tab.c: dj.y
 lex.yy.c: dj.l
 	flex dj.l
 
-.PHONY: clean
 
 clean:
-	@rm -f $(TARGET) $(OBJECTS)
+	@rm -f dj2ll $(OBJECTS) dj.tab.c lex.yy.c
