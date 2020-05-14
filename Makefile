@@ -6,11 +6,19 @@ CXX=clang++
 CFLAGS=-O2
 ANNOY=-pedantic
 DFLAGS=-ggdb3 -O0
-WFLAGS=-Qunused-arguments -Qunused-arguments -Wall -Wpointer-arith -Woverloaded-virtual\
-	   -Werror=return-type -Werror=int-to-pointer-cast -Wtype-limits -Wempty-body\
-	   -Wsign-compare -Wno-invalid-offsetof -Wno-c++0x-extensions -Wno-extended-offsetof\
-	   -Wno-unknown-warning-option -Wno-return-type-c-linkage -Wno-mismatched-tags\
-	   -Wno-error=uninitialized -Wno-error=deprecated-declarations\
+# WFLAGS=-Qunused-arguments -Qunused-arguments -Wall -Wpointer-arith -Woverloaded-virtual\
+# 	   -Werror=return-type -Werror=int-to-pointer-cast -Wtype-limits -Wempty-body\
+# 	   -Wsign-compare -Wno-invalid-offsetof -Wno-c++0x-extensions -Wno-extended-offsetof\
+# 	   -Wno-unknown-warning-option -Wno-return-type-c-linkage -Wno-mismatched-tags\
+# 	   -Wno-error=uninitialized -Wno-error=deprecated-declarations\
+
+BISON=bison
+SED=sed
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+	BISON=/usr/local/opt/bison/bin/bison
+	SED=gsed
+endif
 
 CSOURCES=ast.c symtbl.c typecheck.c util.c dj.tab.c
 CXXSOURCES=codegen.cpp dj2ll.cpp
@@ -24,12 +32,11 @@ debug: lex.yy.c $(CSOURCES) $(CXXSOURCES)
 	$(CXX) $(DFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 *.o $(CXXSOURCES) -o dj2ll
 
 dj.tab.c: dj.y
-	bison dj.y
-	sed -i '/extern YYSTYPE yylval/d' dj.tab.c
+	$(BISON) dj.y
+	$(SED) -i '/extern YYSTYPE yylval/d' dj.tab.c
 
 lex.yy.c: dj.l
 	flex dj.l
 
-
 clean:
-	@rm -f dj2ll $(OBJECTS) dj.tab.c lex.yy.c
+	@rm -f dj2ll *.o dj.tab.c lex.yy.c
