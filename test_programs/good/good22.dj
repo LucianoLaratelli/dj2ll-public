@@ -1,0 +1,19 @@
+class C1 extends Object{nat n;}
+class C2 extends C1 {}
+main {
+  C1 c1;
+  C2 c2;
+  nat n;
+  c1 = new C1();
+  c2 = new C2();
+  c2.n = 5;
+  printNat(c1.n);  //prints 0
+  printNat(c2.n);  //prints 5
+  c1 = c2;
+  printNat(c1.n);  //prints 5
+  c2 = null;
+  n = c2.n; //runtime error here,
+    //due to dereferencing null object
+  //program halts at this point.
+  printNat(n);  //never executes
+}

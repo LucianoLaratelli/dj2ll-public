@@ -1,0 +1,24 @@
+//prints 2 2 2 2 0 1 2 2 2 0 1 1 2 2 0 1 1 2 1 0
+
+class C extends Object { }
+
+class D extends Object { }
+
+class C1 extends C {
+  nat foo (Object o) {
+    if (o instanceof Object) {printNat(1);} else {printNat(2);};
+    if (o instanceof C) {printNat(1);} else {printNat(2);};
+    if (o instanceof D) {printNat(1);} else {printNat(2);};
+    if (o instanceof C1) {printNat(1);} else {printNat(2);};
+    printNat(0);
+  }
+}
+
+main {
+  C1 tester;
+  tester = new C1();
+  tester.foo(null);
+  tester.foo(new Object());
+  tester.foo(new C());
+  tester.foo(new C1());
+}

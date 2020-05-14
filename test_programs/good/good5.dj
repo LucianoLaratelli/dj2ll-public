@@ -1,0 +1,24 @@
+// This DJ program outputs the sum 1 + 2 + ... + 100
+class Summer extends Object {
+    
+  // This method returns the sum 0 + 1 + .. + n
+  nat sum(nat n) {
+    nat toReturn;
+    // note: nat variables automatically get initialized to 0
+      
+    for(0; n>0; n=n-1) { toReturn = toReturn + n; };
+
+    toReturn;
+  }
+}
+
+main {
+  // create a new object of type Summer
+  Summer s;
+  s = new Summer();
+
+  // print the sum 0 + 1 + ... + 100
+  printNat( s.sum(100) );
+}
+
+

@@ -1,0 +1,21 @@
+class C extends Object {
+  nat n;
+  nat foo(nat unused) {
+    nat n;//This is not an error; the local variable n
+          //punctures the scope of the 
+          //variable field n declared on line 2
+    n; //so this n refers to the n declared on line 4
+  }
+  nat bar(nat unused) {
+    nat n;
+    this.n; //this time we refer to the n declared on line 2
+  }
+}
+main {
+  C c;
+  c = new C();
+  c.n = 6;
+  printNat(c.n);  //prints 6
+  printNat(c.foo(5)); //prints 0
+  printNat(c.bar(4)); //prints 6
+}

@@ -1,0 +1,15 @@
+//takes a while to execute, but should work if the
+//generated DISM code manages memory correctly
+class C extends Object { 
+  nat n;
+  nat foo(nat unused) {this.n = 8;}
+  nat bar(nat unused) {this.foo(7);}
+}
+main {
+  nat i;
+  C c;
+  c=new C();
+  for(i=0; !(i>66000); i=i+1) {c.bar(6);};
+  printNat(c.n);
+}
+

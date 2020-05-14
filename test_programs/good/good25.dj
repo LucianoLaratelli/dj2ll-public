@@ -1,0 +1,13 @@
+// This program prints 3 and then echoes user input until 
+// the user user enters 0.  After the user enters 0, 
+// this program outputs 0 twice.
+
+main {
+  nat n;
+  nat m;
+  n = 3;
+  printNat(n);
+  n = printNat( for(77; !(0 == (m=readNat())); 77) {printNat(m);} );
+  printNat(n);
+}
+

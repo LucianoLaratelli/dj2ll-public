@@ -1,0 +1,10 @@
+class C extends Object {
+  nat foo(nat unused) {printNat(1);}
+  nat bar(nat unused) {printNat(2); printNat(foo(3));}
+}
+main {
+  C c;
+  c = new C();
+  printNat(4);
+  printNat(c.bar(5));
+}

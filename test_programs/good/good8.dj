@@ -1,0 +1,13 @@
+//prints 2
+class C1 extends Object {
+  nat callWhoami(nat unused) {this.whoami(0);}
+  nat whoami(nat unused) {printNat(1);}
+}
+class C2 extends C1 {
+  nat whoami(nat unused) {printNat(2);}
+}
+main {
+  C1 testObj;
+  testObj = new C2();
+  testObj.callWhoami(0);
+}

@@ -1,0 +1,12 @@
+//-*- mode: java -*-
+//prints 4
+main {
+  nat x; 
+  nat y; 
+  x=0; 
+  x=y+1;
+  x=x+1; 
+  x=x+1;
+  x=x+1; 
+  printNat(x);
+}

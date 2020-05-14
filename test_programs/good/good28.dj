@@ -1,0 +1,12 @@
+//When run, this program prints: 0 1 1 1 0
+main {
+  nat i;
+  nat k;
+  nat j;
+  printNat(k);
+  printNat(i = j = k+1);
+  printNat(i);
+  printNat(j);
+  printNat(k);
+}
+

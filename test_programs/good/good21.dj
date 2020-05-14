@@ -1,0 +1,11 @@
+//This program contains a null-object dereference runtime error
+//and should print nothing.
+
+class C extends Object{ nat foo(nat n) {printNat(8);} }
+main {
+  C c;
+  c.foo(0); //runtime error: c is null at this point,
+            // so we cannot select a method or field from it
+  printNat(9);
+}
+

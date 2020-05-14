@@ -1,0 +1,18 @@
+//prints 5 0 6 6
+
+class C extends Object {
+  nat n;
+  C identity(C unused) {this;}
+  nat getN(C unused) {this.n;}
+}
+
+main {
+  C c;
+  printNat(  (new C()).n=5 );  
+  c = (new C()).identity(c).identity(c).identity(c);
+  printNat(c.n);  
+  c.identity(c).identity(null).identity(c).identity(null).n = 6;
+  printNat(c.n); 
+  printNat(c.identity(c).getN(c));
+}
+

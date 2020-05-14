@@ -1,0 +1,4 @@
+main{
+  if (!!!!false) {printNat(0);} 
+  else {printNat(1);};
+}

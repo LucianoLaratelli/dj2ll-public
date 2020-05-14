@@ -1,0 +1,18 @@
+//This is a lexically, syntactically, and semantically
+//valid DJ program.  However, an error occurs during
+//execution because we try to select a field/method 
+//of a null (i.e., unallocated) object.
+//This is called a null-dereference error because we
+//are attempting to dereference, or get the value of, 
+//a variable whose object-value is null (i.e., 0).
+
+//During execution, this program produces no output.
+//Instead it halts after a null-dereference check fails.
+
+class C extends Object {nat n;}
+main {
+  C c;
+  printNat(c.n);
+  printNat(8);
+}
+

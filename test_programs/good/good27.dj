@@ -1,0 +1,53 @@
+//Reads natural numbers, prepending them into a linked list. 
+//Stops reading after a 0 is read.  At that point, the list is printed.
+
+//The net effect is that a list of numbers gets printed in the
+//reverse order from which they were read.
+
+class LinkedList extends Object {
+  nat data;  //content of a list node
+  LinkedList next; //(implicit pointer to) the remainder of the list
+  
+  //set the data value in the list's head node to newData
+  //returns newData
+  nat setData(nat newData) { data=newData; }
+
+  //prepend a new node to the list 
+  //the new node will contain the newData 
+  //always returns 0
+  nat prepend(nat newData) {
+    LinkedList currList;
+    currList = new LinkedList();
+    currList.data = data;
+    currList.next = next;
+    data = newData;
+    next = currList;
+    0;
+  }
+
+  //print the list
+  //always returns 0
+  nat printList(nat unused) {
+    //print the data in this list node
+    printNat(data);
+    //if there's more to the list, recursively print the remainder 
+    if(next==null) {0;}
+    else {next.printList(0);};
+  }
+}
+
+main {
+  nat input;
+  //create a linked list
+  LinkedList ll;
+  ll = new LinkedList();
+
+  //read data into the list
+  input = readNat();
+  for(ll.setData(input); !(input==0); ll.prepend(input)) {
+    input = readNat();
+  };
+
+  //print the list
+  ll.printList(0);
+}

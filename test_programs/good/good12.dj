@@ -1,0 +1,8 @@
+class C extends Object {
+  nat f(nat n) {5;}
+}
+main {
+  C c;
+  c = new C();
+  printNat(c.f(c.f(c.f(0))));  //prints 5
+}

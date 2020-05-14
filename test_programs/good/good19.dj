@@ -1,0 +1,33 @@
+//correct output: 99 88 99 77 55 66 99 77 55 66
+
+class C1 extends Object {
+  nat foo(nat unused) {printNat(99);}
+  nat bar(nat unused) {printNat(88);}
+}
+class C2 extends C1 {
+  nat bar(nat unused) {printNat(77);}
+}
+class C3 extends C1 {
+  nat bar(nat unused) {printNat(66);}
+  nat foo(nat unused) {printNat(55);}
+}
+main {
+  C1 c1;
+  C2 c2;
+  C3 c3;
+  c1 = new C1();
+  c2 = new C2();
+  c3 = new C3(); 
+  c1.foo(0);
+  c1.bar(0);
+  c2.foo(0);
+  c2.bar(0);
+  c3.foo(0);
+  c3.bar(0);
+  c1 = new C2();
+  c1.foo(0);
+  c1.bar(0);
+  c1 = new C3();
+  c1.foo(0);
+  c1.bar(0);
+}

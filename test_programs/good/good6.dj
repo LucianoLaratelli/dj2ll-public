@@ -1,0 +1,29 @@
+// This program tests the short-circuit && operation.
+// The correct output is:
+//  3
+//  4
+//  987
+//  4
+//  3
+//  3
+
+class Tester extends Object {
+  bool print4returnTrue(nat unused) { printNat(4); true; }
+}
+
+main {
+  Tester test;
+  test = new Tester();
+
+  if(false&&false) {printNat(987);}
+  else {printNat(3);};
+
+  if(true && test.print4returnTrue(0)) {printNat(987);}
+  else {printNat(3);};
+
+  if(test.print4returnTrue(0) && false) {printNat(987);}
+  else {printNat(3);};
+
+  if(false && test.print4returnTrue(0)) {printNat(987);}
+  else {printNat(3);};
+}

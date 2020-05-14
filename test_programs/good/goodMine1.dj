@@ -1,0 +1,11 @@
+class C extends Object {
+  nat foo(nat bar) {
+    0;
+  }
+
+  nat boo(nat far) {
+    foo(0);
+  }
+}
+
+main {0;}

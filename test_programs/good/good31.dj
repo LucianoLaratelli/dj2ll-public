@@ -1,0 +1,42 @@
+//-*-mode:java-*-
+// output should be 9 6 26 6 26 26 12
+
+class C extends Object {
+  static nat n;
+  static Object o;
+  Object b;
+}
+
+class C1 extends C {
+  static nat m;
+  C c;
+  Object d;
+}
+
+class C2 extends C {
+  static nat m;
+  nat foo(nat unused) { n = n + m + 5; }
+  C1 bar(nat unused) { null; }
+}
+
+main {
+  C1 a;
+  C2 b;
+
+  0;
+  // a = new C1();
+  // a.n = 5;
+  // a.m = 6;
+
+  // b = new C2();
+  // b.n = b.n + 4;
+  // b.m = 12;
+
+  // printNat(a.n); //prints 9
+  // printNat(a.m); //prints 6
+  // printNat(b.foo(0)); //prints 26
+  // printNat(b.bar(0).m); //prints 6
+  // printNat(a.n); //prints 26
+  // printNat(b.n); //prints 26
+  // printNat(b.m); //prints 12
+}
