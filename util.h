@@ -26,6 +26,10 @@
 #define BOLDGREEN "\033[1m\033[32m"
 #define BOLDMAGENTA "\033[1m\033[35m"
 
+#define FOURSPACES "    "
+#define EIGHTSPACES FOURSPACES FOURSPACES
+#define TWELVESPACES EIGHTSPACES FOURSPACES
+
 #define NULL_CHECK(somePointer)                                                \
   if (somePointer == NULL) {                                                   \
     fprintf(                                                                   \
@@ -62,7 +66,8 @@
 
   int join(int a, int b);
   void printMainST(void);
-  void printVarDeclST(VarDecl * st, int size);
+  void printVarDeclST(VarDecl * st, int size, char *class, char *modifier);
+  /* void printMethodDeclST(void); */
   void printClassesST(void);
   char *typeString(int t);
   char *nodeTypeString(ASTNodeType t);
