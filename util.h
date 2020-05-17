@@ -67,7 +67,7 @@
   int join(int a, int b);
   void printMainST(void);
   void printVarDeclST(VarDecl * st, int size, char *class, char *modifier);
-  /* void printMethodDeclST(void); */
+  void printMethodDeclST(MethodDecl * st, int size, char *class);
   void printClassesST(void);
   char *typeString(int t);
   char *nodeTypeString(ASTNodeType t);
