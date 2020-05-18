@@ -20,7 +20,7 @@ ifeq ($(UNAME_S),Darwin)
 	SED=gsed
 endif
 
-CSOURCES=ast.c symtbl.c typecheck.c util.c dj.tab.c
+CSOURCES=ast.c symtbl.c typecheck.c util.c dj.tab.c typeErrors.c
 CXXSOURCES=codegen.cpp dj2ll.cpp
 
 dj2ll: lex.yy.c $(CSOURCES) $(CXXSOURCES)
