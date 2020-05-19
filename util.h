@@ -26,6 +26,9 @@ extern "C" {
 #define BOLDGREEN "\033[1m\033[32m"
 #define BOLDMAGENTA "\033[1m\033[35m"
 
+char *BRBTR(char *arg);
+char *BGBTR(char *arg);
+
 #define FOURSPACES "    "
 #define EIGHTSPACES FOURSPACES FOURSPACES
 #define TWELVESPACES EIGHTSPACES FOURSPACES
