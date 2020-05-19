@@ -4,9 +4,7 @@
 #include <iostream>
 #include <string>
 
-#include "ast.h"
-#include "symtbl.h"
-#include "typecheck.h"
+#include "util.h"
 
 extern FILE *yyin;
 extern FILE *yyout;
@@ -32,6 +30,10 @@ int main(int argc, char **argv) {
   yyparse();
   fclose(yyin);
   setupSymbolTables(pgmAST);
+  // printClassesST();
+  // printMainST();
   typecheckProgram();
+  // std::cout << numClasses << std::endl;
+  // printAST(pgmAST);
   return 0;
 }
