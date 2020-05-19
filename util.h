@@ -75,6 +75,8 @@ void printClassesST(void);
 char *typeString(int t);
 char *nodeTypeString(ASTNodeType t);
 
+char *numToString(int n);
+
 #ifdef __cplusplus
 }
 #endif
