@@ -28,6 +28,7 @@ extern "C" {
 
 char *BRBTR(char *arg);
 char *BGBTR(char *arg);
+char *BMBTR(char *arg);
 
 #define FOURSPACES "    "
 #define EIGHTSPACES FOURSPACES FOURSPACES
