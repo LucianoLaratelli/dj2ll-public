@@ -2,7 +2,7 @@
 #define DJ2LL_UTIL_HEADER
 
 #ifdef __cplusplus
-{
+extern "C" {
 #endif
 
 #include "ast.h"
@@ -45,32 +45,32 @@
   printf("type of expr with variable name %s from function %s is %s\n",        \
          #someType, __func__, typeString(someType));
 
-  typedef struct {
-    int classNum;
-    int methodIndex;
-    int paramType;
-    int returnType;
-  } methodInfo;
+typedef struct {
+  int classNum;
+  int methodIndex;
+  int paramType;
+  int returnType;
+} methodInfo;
 
-  typedef struct {
-    int indexST; // index in the symbol table this variable resides
-    int isStatic;
-  } classVarInfo;
+typedef struct {
+  int indexST; // index in the symbol table this variable resides
+  int isStatic;
+} classVarInfo;
 
-  void reportLookupError(char *requestedVar, int lineNumber);
-  int lookupMainST(char *desired, int lineNumber);
-  int lookupClassesST(char *desired, int lineNumber);
-  int lookupClassVars(char *desired, int lineNumber, int CCE);
-  int lookupVarType(char *desired, int CCE, int MCE, int usageLine);
-  methodInfo findMethodIndex(int CCE, char *methodName, int lineNumber);
+void reportLookupError(char *requestedVar, int lineNumber);
+int lookupMainST(char *desired, int lineNumber);
+int lookupClassesST(char *desired, int lineNumber);
+int lookupClassVars(char *desired, int lineNumber, int CCE);
+int lookupVarType(char *desired, int CCE, int MCE, int usageLine);
+methodInfo findMethodIndex(int CCE, char *methodName, int lineNumber);
 
-  int join(int a, int b);
-  void printMainST(void);
-  void printVarDeclST(VarDecl * st, int size, char *class, char *modifier);
-  void printMethodDeclST(MethodDecl * st, int size, char *class);
-  void printClassesST(void);
-  char *typeString(int t);
-  char *nodeTypeString(ASTNodeType t);
+int join(int a, int b);
+void printMainST(void);
+void printVarDeclST(VarDecl *st, int size, char *theClass, char *modifier);
+void printMethodDeclST(MethodDecl *st, int size, char *theClass);
+void printClassesST(void);
+char *typeString(int t);
+char *nodeTypeString(ASTNodeType t);
 
 #ifdef __cplusplus
 }
