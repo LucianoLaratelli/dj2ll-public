@@ -24,8 +24,7 @@ extern "C" {
      "any-object" (i.e., the type of "null"), if i = -3
      "no-object" (i.e., the type of Object's superclass), if i = -4
      Undefined (i.e., an illegal type), if i < -4
-   When i>=0, the symbol table for type (i.e., class) i is
-   at classesST[i].
+   When i>=0, the symbol table for type (i.e., class) i is at classesST[i].
 
    NOTE on typechecking:
    This method does NOT perform any checks on the symbol tables
