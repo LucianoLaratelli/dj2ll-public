@@ -13,6 +13,7 @@
                            int badType, char *expected);
   void reportDuplicateField(char *varName, char *className, char *superClass,
                             int varLine, int superClassVarLine);
+  void reportBadType(int lineNumber, char *varName);
 
 #ifdef __cplusplus
 }
