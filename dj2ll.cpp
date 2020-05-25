@@ -6,10 +6,23 @@
 
 #include "util.h"
 
+ASTree *wholeProgram;
+ASTree *mainExprs;
+int numMainBlockLocals;
+VarDecl *mainBlockST;
+int numClasses;
+ClassDecl *classesST;
+
 extern FILE *yyin;
 extern FILE *yyout;
 extern "C" int yyparse(void);
 extern ASTree *pgmAST;
+
+struct CInterface {
+  ClassDecl *classesST;
+  int numclasses;
+  VarDecl *mainBlockST;
+};
 
 int main(int argc, char **argv) {
   if (argc < 2) {
@@ -31,5 +44,6 @@ int main(int argc, char **argv) {
   fclose(yyin);
   setupSymbolTables(pgmAST);
   typecheckProgram();
+  printClassesST();
   return 0;
 }
