@@ -108,20 +108,44 @@ typedef struct classinfo {
 /* GLOBALS THAT PROVIDE EASY ACCESS TO PARTS OF THE AST */
 /* THESE GLOBALS GET SET IN setupSymbolTables */
 // The entire program's AST
-ASTree *wholeProgram;
+#ifdef __cplusplus
+extern "C" ASTree *wholeProgram;
+#else
+extern ASTree *wholeProgram;
+#endif
 
 // The expression list in the main block of the DJ program
-ASTree *mainExprs;
+#ifdef __cplusplus
+extern "C" ASTree *mainExprs;
+#else
+extern ASTree *mainExprs;
+#endif
 
 // Array (symbol table) of locals in the main block
-int numMainBlockLocals; // size of the array
-VarDecl *mainBlockST;   // the array itself
+#ifdef __cplusplus
+extern "C" int numMainBlockLocals; // size of the array
+#else
+extern int numMainBlockLocals; // size of the array
+#endif
+#ifdef __cplusplus
+extern "C" VarDecl *mainBlockST; // the array itself
+#else
+extern VarDecl *mainBlockST;   // the array itself
+#endif
 
 // Array (symbol table) of class declarations
 // Note that the minimum array size is 1,
 //   due to the always-present Object class
-int numClasses;       // size of the array
-ClassDecl *classesST; // the array itself
+#ifdef __cplusplus
+extern "C" int numClasses; // size of the array
+#else
+extern int numClasses;         // size of the array
+#endif
+#ifdef __cplusplus
+extern "C" ClassDecl *classesST; // the array itself
+#else
+extern ClassDecl *classesST;   // the array itself
+#endif
 
 #ifdef __cplusplus
 }
