@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include "ast.h"
+#include "llast.hpp"
 #include "symtbl.h"
 #include "typecheck.h"
 
@@ -19,12 +20,13 @@ extern "C" {
 
 // colors for pretty-printing error messages
 // just having a little fun!
-#define RESET "\033[0m"
-#define RED "\033[31m"
-#define GREEN "\033[32m"
-#define BOLDRED "\33[1m\033[31m"
-#define BOLDGREEN "\033[1m\033[32m"
-#define BOLDMAGENTA "\033[1m\033[35m"
+/*TODO RENAME THESE, LLVM FAILLING*/
+#define LRESET "\033[0m"
+#define LRED "\033[31m"
+#define LGREEN "\033[32m"
+#define LBOLDRED "\33[1m\033[31m"
+#define LBOLDGREEN "\033[1m\033[32m"
+#define LBOLDMAGENTA "\033[1m\033[35m"
 
 char *BRBTR(char *arg);
 char *BGBTR(char *arg);
@@ -40,8 +42,8 @@ char *BMBTR(char *arg);
         stderr,                                                                \
         "%s(internal error)\nFound NULL pointer with name %s%s\"%s\"%s%s in "  \
         "function%s%s \"%s\"%s%s, exiting.\n%s",                               \
-        RED, RESET, BOLDGREEN, #somePointer, RESET, RED, RESET, BOLDMAGENTA,   \
-        __func__, RESET, RED, RESET);                                          \
+        LRED, LRESET, LBOLDGREEN, #somePointer, LRESET, LRED, LRESET,          \
+        LBOLDMAGENTA, __func__, LRESET, LRED, LRESET);                         \
     exit(-1);                                                                  \
   }
 
