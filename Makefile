@@ -21,15 +21,15 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 CSOURCES=ast.c symtbl.c typecheck.c util.c dj.tab.c typeErrors.c
-CXXSOURCES=codegen.cpp dj2ll.cpp
+CXXSOURCES=codegen.cpp dj2ll.cpp llast.cpp
 
 dj2ll: lex.yy.c $(CSOURCES) $(CXXSOURCES)
 	$(CC)  $(CFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
-	$(CXX) $(CFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 *.o $(CXXSOURCES) -o dj2ll
+	$(CXX) $(CFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 *.o $(CXXSOURCES) -o dj2ll `llvm-config --cxxflags --ldflags --libs`
 
 debug: lex.yy.c $(CSOURCES) $(CXXSOURCES)
 	$(CC)  $(DFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
-	$(CXX) $(DFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 *.o $(CXXSOURCES) -o dj2ll
+	$(CXX) $(DFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 *.o $(CXXSOURCES) -o dj2ll `llvm-config --cxxflags --ldflags --libs`
 
 dj.tab.c: dj.y
 	$(BISON) dj.y
