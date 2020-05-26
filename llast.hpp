@@ -2,60 +2,81 @@
 #define __LLAST_H_
 
 /* defines class and functions for the AST that will be used to perform code
- * generation -- essentially a C++-ized version of the original AST defined
- * ast.h */
+ * generation*/
 
 #include "util.h"
+
+#include "llvm/IR/Module.h"
 #include <vector>
 
-class ExprAST {
-  std::vector<ExprAST> children;
-  unsigned int lineNumber;
+class CodeGenContext;
+class DJClassDecl;
+class DJVarDecl;
+class DJExpression;
 
+typedef std::vector<DJClassDecl *> ClassDeclList;
+typedef std::vector<DJVarDecl *> VarDeclList;
+typedef std::vector<DJExpression *> ExprList;
+
+class DJNode {
 public:
-  virtual ~ExprAST() = default;
-  void setLineNo(unsigned int lineNumber) { this->lineNumber = lineNumber; }
-  void setChildren(std::vector<ExprAST> c) { this->children = c; }
+  virtual ~DJNode() {}
+  virtual llvm::Value *codeGen() = 0;
 };
 
-ExprAST translateAST(ASTree *t);
-
-class NatLiteralExprAST : public ExprAST {
-  unsigned int natVal;
-
+class DJProgram : public DJNode {
 public:
-  NatLiteralExprAST(unsigned int natVal) : natVal(natVal) {}
+  // ClassDeclList classes;
+  // VarDeclList mainDecls;
+  ExprList mainExprs;
+  // DJProgram(ClassDeclList classes, VarDeclList mainDecls, ExprList mainExprs)
+  //     : classes(classes), mainDecls(mainDecls), mainExprs(mainExprs) {}
+  DJProgram(ExprList mainExprs) : mainExprs(mainExprs) {}
+  llvm::Value *codeGen() override;
+  void print();
 };
 
-class BoolLiteralExprAST : public ExprAST {
-  bool boolVal;
-
+class DJExpression : public DJNode {
 public:
-  BoolLiteralExprAST(bool boolVal) : boolVal(boolVal) {}
+  virtual void print(int offset) = 0;
 };
 
-class plusExprAST : public ExprAST {
-  ExprAST LHS, RHS;
-
+class DJNat : public DJExpression {
 public:
-  plusExprAST(ExprAST LHS, ExprAST RHS)
-      : LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+  unsigned int value;
+  DJNat(unsigned int value) : value(value) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
 };
 
-class minusExprAST : public ExprAST {
-  ExprAST LHS, RHS;
+// class DJBool : public DJExpression {
+// public:
+//   bool value;
+//   DJBool(bool value) : value(value) {}
+//   virtual llvm::Value *codeGen(CodeGenContext &context);
+// };
 
+class DJPlus : public DJExpression {
 public:
-  minusExprAST(ExprAST LHS, ExprAST RHS)
-      : LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+  DJExpression *lhs;
+  DJExpression *rhs;
+  DJPlus(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
 };
 
-class timesExprAST : public ExprAST {
-  ExprAST LHS, RHS;
+// class DJMinus : public DJExpression {
+//   DJExpression &lhs;
+//   DJExpression &rhs;
+//   DJMinus(DJExpression &lhs, DJExpression &rhs) : lhs(lhs), rhs(rhs) {}
+//   virtual llvm::Value *codeGen(CodeGenContext &context);
+// };
 
-public:
-  timesExprAST(ExprAST LHS, ExprAST RHS)
-      : LHS(std::move(LHS)), RHS(std::move(RHS)) {}
-};
+// class DJTimes : public DJExpression {
+//   DJExpression &lhs;
+//   DJExpression &rhs;
+//   DJTimes(DJExpression &lhs, DJExpression &rhs) : lhs(lhs), rhs(rhs) {}
+//   virtual llvm::Value *codeGen(CodeGenContext &context);
+// };
 
 #endif // __LLAST_H_
