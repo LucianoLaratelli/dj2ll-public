@@ -5,6 +5,7 @@
 #include <string>
 
 #include "llast.hpp"
+#include "translateAST.hpp"
 #include "util.h"
 
 ASTree *wholeProgram;
@@ -43,8 +44,12 @@ int main(int argc, char **argv) {
   }
   yyparse();
   fclose(yyin);
+
   setupSymbolTables(pgmAST);
   typecheckProgram();
-  printClassesST();
+
+  printAST(wholeProgram);
+  auto LLProgram = translateAST(wholeProgram);
+  LLProgram.print();
   return 0;
 }
