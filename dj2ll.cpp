@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 
+#include "llast.hpp"
 #include "util.h"
 
 ASTree *wholeProgram;

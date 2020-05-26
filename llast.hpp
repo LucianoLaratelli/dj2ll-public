@@ -6,22 +6,19 @@
  * ast.h */
 
 #include "util.h"
-#include <memory>
 #include <vector>
 
 class ExprAST {
-  std::vector<std::unique_ptr<ExprAST>> children;
+  std::vector<ExprAST> children;
   unsigned int lineNumber;
 
 public:
   virtual ~ExprAST() = default;
   void setLineNo(unsigned int lineNumber) { this->lineNumber = lineNumber; }
-  void setChildren(std::vector<std::unique_ptr<ExprAST>> c) {
-    this->children = c;
-  }
+  void setChildren(std::vector<ExprAST> c) { this->children = c; }
 };
 
-std::unique_ptr<ExprAST> translateAST(ASTree *t);
+ExprAST translateAST(ASTree *t);
 
 class NatLiteralExprAST : public ExprAST {
   unsigned int natVal;
@@ -38,26 +35,26 @@ public:
 };
 
 class plusExprAST : public ExprAST {
-  std::unique_ptr<ExprAST> LHS, RHS;
+  ExprAST LHS, RHS;
 
 public:
-  plusExprAST(std::unique_ptr<ExprAST> LHS, std::unique_ptr<ExprAST> RHS)
+  plusExprAST(ExprAST LHS, ExprAST RHS)
       : LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 };
 
 class minusExprAST : public ExprAST {
-  std::unique_ptr<ExprAST> LHS, RHS;
+  ExprAST LHS, RHS;
 
 public:
-  minusExprAST(std::unique_ptr<ExprAST> LHS, std::unique_ptr<ExprAST> RHS)
+  minusExprAST(ExprAST LHS, ExprAST RHS)
       : LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 };
 
 class timesExprAST : public ExprAST {
-  std::unique_ptr<ExprAST> LHS, RHS;
+  ExprAST LHS, RHS;
 
 public:
-  timesExprAST(std::unique_ptr<ExprAST> LHS, std::unique_ptr<ExprAST> RHS)
+  timesExprAST(ExprAST LHS, ExprAST RHS)
       : LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 };
 
