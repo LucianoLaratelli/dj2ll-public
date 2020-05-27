@@ -1,13 +1,11 @@
 #ifndef __LLAST_H_
 #define __LLAST_H_
+#include "llvm_includes.hpp"
+#include "util.h"
+#include <vector>
 
 /* defines class and functions for the AST that will be used to perform code
  * generation*/
-
-#include "util.h"
-
-#include "llvm/IR/Module.h"
-#include <vector>
 
 class CodeGenContext;
 class DJClassDecl;
@@ -32,7 +30,7 @@ public:
   // DJProgram(ClassDeclList classes, VarDeclList mainDecls, ExprList mainExprs)
   //     : classes(classes), mainDecls(mainDecls), mainExprs(mainExprs) {}
   DJProgram(ExprList mainExprs) : mainExprs(mainExprs) {}
-  llvm::Value *codeGen() override;
+  llvm::Function *codeGen() override;
   void print();
 };
 

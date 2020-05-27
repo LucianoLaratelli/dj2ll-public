@@ -5,6 +5,7 @@
 #include <string>
 
 #include "llast.hpp"
+#include "llvm_includes.hpp"
 #include "translateAST.hpp"
 #include "util.h"
 
@@ -48,8 +49,11 @@ int main(int argc, char **argv) {
   setupSymbolTables(pgmAST);
   typecheckProgram();
 
-  printAST(wholeProgram);
+  // printAST(wholeProgram);
   auto LLProgram = translateAST(wholeProgram);
-  LLProgram.print();
+  // LLProgram.print();
+  TheModule = std::make_unique<llvm::Module>("dj2ll", TheContext);
+  auto *IR = LLProgram.codeGen();
+  IR->print(llvm::errs());
   return 0;
 }

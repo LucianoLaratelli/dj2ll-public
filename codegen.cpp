@@ -1,11 +1,7 @@
 #include "codegen.hpp"
 
 #include "llast.hpp"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/Instruction.h"
+#include "llvm_includes.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -18,13 +14,7 @@
 
 using namespace llvm;
 
-static LLVMContext TheContext;
-static IRBuilder<> Builder(TheContext);
-static std::unique_ptr<Module> TheModule;
-static std::map<std::string, Value *> NamedValues;
-;
-
-llvm::Value *DJProgram::codeGen() {
+llvm::Function *DJProgram::codeGen() {
   llvm::Value *last = nullptr;
   // for (auto c : classes) {
   //   last = c->codeGen(context);
@@ -32,10 +22,17 @@ llvm::Value *DJProgram::codeGen() {
   // for (auto m : mainDecls) {
   //   last = m->codeGen(context);
   // }
+  FunctionType *FT = FunctionType::get(Type::getVoidTy(TheContext), false);
+  Function *TheFunction =
+      Function::Create(FT, Function::ExternalLinkage, "main", TheModule.get());
+  BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
+  Builder.SetInsertPoint(BB);
   for (auto e : mainExprs) {
     last = e->codeGen();
   }
-  return last;
+  Builder.CreateRet(last);
+  // verifyFunction(*TheFunction);
+  return TheFunction;
 }
 
 llvm::Value *DJPlus::codeGen() {
