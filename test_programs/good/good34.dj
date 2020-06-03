@@ -1,4 +1,2 @@
 // -*-mode:java-*-
-main {
-  new Object() instanceof Object;
-}
+main { new Object() instanceof Object; }

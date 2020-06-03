@@ -1,13 +1,14 @@
+//-*-mode:java-*-
 main {
  printNat(3);
  printNat(4+5);
  if(4>4) {printNat(6-2-1);} else {printNat(7*2-9);};
- if(null==null) {printNat(6-2-1);} else {printNat(7*2-9);};
- if(!(5==5 && 3>4)) {printNat(readNat()); printNat(1);}
-   else {printNat(readNat()); printNat(2);};
+ //if(null==null) {printNat(6-2-1);} else {printNat(7*2-9);};
+ //if(!(5==5 && 3>4)) {printNat(readNat()); printNat(1);}
+   //else {printNat(readNat()); printNat(2);};
  if (!!!!!false) {printNat(1);} else {printNat(0);};
  if (!!!!!true) {printNat(1);} else {printNat(0);};
  printNat(4);
  printNat(10);
- for(0; !(0 == readNat()); 0) {printNat(2222);};
+ //for(0; !(0 == readNat()); 0) {printNat(2222);};
 }
