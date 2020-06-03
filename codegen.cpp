@@ -78,7 +78,20 @@ Function *DJProgram::codeGen() {
     exit(-1);
   }
   auto CPU = sys::getHostCPUName();
-  auto Features = ""; /*TODO: implement with sys::getHostCPUFeatures()*/
+  std::string Features = "";
+  StringMap<bool> HostFeatures;
+  if (!sys::getHostCPUFeatures(HostFeatures)) {
+    std::cerr << LRED "Could not determine host CPU features.\n";
+
+  } else {
+    SubtargetFeatures TheFeatures;
+    for (auto i : HostFeatures.keys()) {
+      if (HostFeatures[i]) {
+        TheFeatures.AddFeature(i.str());
+      }
+    }
+    Features = TheFeatures.getString();
+  }
 
   TargetOptions opt;
   auto RM = Reloc::Model::DynamicNoPIC;
