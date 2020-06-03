@@ -19,7 +19,6 @@
 
 using namespace llvm;
 extern std::string inputFile;
-// static llvm::Value *formatStr = Builder.CreateGlobalStringPtr("%d\n");
 
 static std::unique_ptr<Module> TheModule;
 Function *createFunc(IRBuilder<> &Builder, std::string Name) {
