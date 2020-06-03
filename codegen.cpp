@@ -47,8 +47,8 @@ Function *DJProgram::codeGen() {
   args.push_back(Type::getInt8PtrTy(TheContext));
   FunctionType *printfType =
       FunctionType::get(Builder.getInt32Ty(), args, true);
-  Constant *printfFunc = Function::Create(printfType, Function::ExternalLinkage,
-                                          "printf", TheModule.get());
+  Function::Create(printfType, Function::ExternalLinkage, "printf",
+                   TheModule.get());
   /*begin codegen for `main`*/
   Function *main = createFunc(Builder, "main");
   BasicBlock *entry = createBB(main, "entry");
@@ -60,6 +60,8 @@ Function *DJProgram::codeGen() {
   std::cout << "****************\n";
   TheModule->print(outs(), nullptr);
   std::cout << "****************\n";
+  /*begin emitting object file -- copied mostly verbatim from the kaleidoscope
+   * tutorial*/
   auto TargetTriple = sys::getDefaultTargetTriple();
   InitializeAllTargetInfos();
   InitializeAllTargets();
@@ -79,9 +81,7 @@ Function *DJProgram::codeGen() {
   auto Features = "";
 
   TargetOptions opt;
-  // auto RM = Optional<Reloc::Model::Static>();
   auto RM = Reloc::Model::DynamicNoPIC;
-  // auto RM = Reloc::getRelocationModel();
   auto TargetMachine =
       Target->createTargetMachine(TargetTriple, CPU, Features, opt, RM);
   TheModule->setDataLayout(TargetMachine->createDataLayout());
@@ -104,30 +104,6 @@ Function *DJProgram::codeGen() {
 
   pass.run(*TheModule);
   dest.flush();
-
-  /*
-   * emit executable
-   */
-  clang::CompilerInstance compiler;
-  auto invocation = std::shared_ptr<clang::CompilerInvocation>(
-      new clang::CompilerInvocation());
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID(
-      new clang::DiagnosticIDs());
-  auto diagOptions = new clang::DiagnosticOptions();
-  clang::DiagnosticsEngine Diags(
-      DiagID, diagOptions,
-      new clang::TextDiagnosticPrinter(llvm::errs(), diagOptions));
-  std::vector<const char *> arguments = {Filename.c_str()};
-  clang::CompilerInvocation::CreateFromArgs(*invocation, arguments, Diags);
-  compiler.setInvocation(invocation);
-  compiler.setDiagnostics(new clang::DiagnosticsEngine(
-      DiagID, diagOptions,
-      new clang::TextDiagnosticPrinter(llvm::errs(), diagOptions)));
-  std::unique_ptr<clang::CodeGenAction> action(new clang::EmitLLVMOnlyAction());
-  compiler.ExecuteAction(*action);
-  std::unique_ptr<llvm::Module> result = action->takeModule();
-  llvm::errs() << *result;
-  // return result.release();
   return main;
 }
 

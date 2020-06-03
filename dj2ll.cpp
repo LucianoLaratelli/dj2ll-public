@@ -54,10 +54,5 @@ int main(int argc, char **argv) {
 
   // printAST(wholeProgram);
   auto LLProgram = translateAST(wholeProgram);
-  // LLProgram.print();
-  auto *IR = LLProgram.codeGen();
-  // std::cout << "~~~~~~~~~~~~~~~\n";
-  // IR->print(llvm::errs());
-  // std::cout << "~~~~~~~~~~~~~~~\n";
-  return 0;
+  LLProgram.codeGen();
 }

@@ -1,13 +1,6 @@
 #ifndef __LLVM_INCLUDES_H_
 #define __LLVM_INCLUDES_H_
-// #include "clang/Basic/Diagnostic.h"
-// #include "clang/Basic/DiagnosticOptions.h"
-// #include "clang/Driver/Compilation.h"
-// #include "clang/Driver/Driver.h"
-#include "clang/CodeGen/CodeGenAction.h"
-#include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/TextDiagnosticPrinter.h"
+
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
