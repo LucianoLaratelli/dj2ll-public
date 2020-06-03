@@ -77,8 +77,9 @@ Function *DJProgram::codeGen() {
     errs() << Error;
     exit(-1);
   }
-  auto CPU = "generic";
-  auto Features = "";
+  auto CPU = sys::getHostCPUName();
+  std::cout << CPU.str() << std::endl;
+  auto Features = ""; /*TODO: implement with sys::getHostCPUFeatures()*/
 
   TargetOptions opt;
   auto RM = Reloc::Model::DynamicNoPIC;
