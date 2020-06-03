@@ -78,7 +78,6 @@ Function *DJProgram::codeGen() {
     exit(-1);
   }
   auto CPU = sys::getHostCPUName();
-  std::cout << CPU.str() << std::endl;
   auto Features = ""; /*TODO: implement with sys::getHostCPUFeatures()*/
 
   TargetOptions opt;
