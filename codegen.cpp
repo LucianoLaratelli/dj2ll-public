@@ -176,6 +176,84 @@ Value *DJNot::codeGen() {
   return Builder.CreateNot(N);
 }
 
+Value *DJEqual::codeGen() {
+  Value *L = lhs->codeGen();
+  Value *R = rhs->codeGen();
+  if (!L || !R) {
+    return nullptr;
+  }
+  return Builder.CreateICmpEQ(L, R);
+}
+
+Value *DJGreater::codeGen() {
+  Value *L = lhs->codeGen();
+  Value *R = rhs->codeGen();
+  if (!L || !R) {
+    return nullptr;
+  }
+  return Builder.CreateICmpUGT(L, R);
+}
+
+Value *DJAnd::codeGen() {
+  Value *L = lhs->codeGen();
+  Value *R = rhs->codeGen();
+  if (!L || !R) {
+    return nullptr;
+  }
+  return Builder.CreateAnd(L, R);
+}
+
 Value *DJTrue::codeGen() { return ConstantInt::get(TheContext, APInt(1, 1)); }
 
 Value *DJFalse::codeGen() { return ConstantInt::get(TheContext, APInt(1, 0)); }
+
+Value *DJIf::codeGen() {
+  /*almost verbatim from LLVM kaleidescope tutorial; comments are not mine*/
+  Value *condValue = cond->codeGen();
+  if (!cond) {
+    std::cerr << LRED "Failure in DJIf::codeGen() for condValue\n";
+    exit(-1);
+  }
+  condValue = Builder.CreateICmpNE(condValue,
+                                   ConstantInt::get(TheContext, APInt(1, 0)));
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+  // Create blocks for the then and else cases.  Insert the 'then' block at the
+  // end of the function.
+  BasicBlock *ThenBB = BasicBlock::Create(TheContext, "then", TheFunction);
+  BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+  BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
+
+  Builder.CreateCondBr(condValue, ThenBB, ElseBB);
+  // Emit then value.
+  Builder.SetInsertPoint(ThenBB);
+
+  Value *ThenV;
+  for (auto &e : thenBlock) {
+    ThenV = e->codeGen();
+  }
+
+  Builder.CreateBr(MergeBB);
+  // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
+  ThenBB = Builder.GetInsertBlock();
+  // Emit else block.
+  TheFunction->getBasicBlockList().push_back(ElseBB);
+  Builder.SetInsertPoint(ElseBB);
+
+  Value *ElseV;
+  for (auto &e : elseBlock) {
+    ElseV = e->codeGen();
+  }
+
+  Builder.CreateBr(MergeBB);
+  // codegen of 'Else' can change the current block, update ElseBB for the PHI.
+  ElseBB = Builder.GetInsertBlock();
+  // Emit merge block.
+  TheFunction->getBasicBlockList().push_back(MergeBB);
+  Builder.SetInsertPoint(MergeBB);
+  PHINode *PN = Builder.CreatePHI(Type::getInt32Ty(TheContext), 2, "iftmp");
+
+  PN->addIncoming(ThenV, ThenBB);
+  PN->addIncoming(ElseV, ElseBB);
+  return PN;
+}

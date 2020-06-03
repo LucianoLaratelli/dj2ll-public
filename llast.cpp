@@ -40,6 +40,24 @@ void DJTimes::print(int offset) {
   rhs->print(offset + 1);
 }
 
+void DJEqual::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ EQUAL\n";
+  lhs->print(offset + 1);
+  rhs->print(offset + 1);
+}
+
+void DJGreater::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ GREATER\n";
+  lhs->print(offset + 1);
+  rhs->print(offset + 1);
+}
+
+void DJAnd::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ AND\n";
+  lhs->print(offset + 1);
+  rhs->print(offset + 1);
+}
+
 void DJPrint::print(int offset) {
   std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ PRINT\n";
   printee->print(offset + 1);
@@ -47,4 +65,15 @@ void DJPrint::print(int offset) {
 
 void DJNot::print(int offset) {
   std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ NOT\n";
+}
+
+void DJIf::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ IF\n";
+  cond->print(offset + 1);
+  for (auto &e : thenBlock) {
+    e->print(offset + 1);
+  }
+  for (auto &e : elseBlock) {
+    e->print(offset + 1);
+  }
 }

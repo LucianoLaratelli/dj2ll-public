@@ -65,8 +65,7 @@ public:
 
 class DJPlus : public DJExpression {
 public:
-  DJExpression *lhs;
-  DJExpression *rhs;
+  DJExpression *lhs, *rhs;
   DJPlus(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
@@ -74,8 +73,7 @@ public:
 
 class DJMinus : public DJExpression {
 public:
-  DJExpression *lhs;
-  DJExpression *rhs;
+  DJExpression *lhs, *rhs;
   DJMinus(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
@@ -83,8 +81,7 @@ public:
 
 class DJTimes : public DJExpression {
 public:
-  DJExpression *lhs;
-  DJExpression *rhs;
+  DJExpression *lhs, *rhs;
   DJTimes(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
@@ -102,6 +99,40 @@ class DJNot : public DJExpression {
 public:
   DJExpression *negated;
   DJNot(DJExpression *negated) : negated(negated) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
+class DJEqual : public DJExpression {
+public:
+  DJExpression *lhs, *rhs;
+  DJEqual(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
+class DJGreater : public DJExpression {
+public:
+  DJExpression *lhs, *rhs;
+  DJGreater(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
+class DJAnd : public DJExpression {
+public:
+  DJExpression *lhs, *rhs;
+  DJAnd(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
+class DJIf : public DJExpression {
+public:
+  DJExpression *cond;
+  ExprList thenBlock, elseBlock;
+  DJIf(DJExpression *cond, ExprList thenBlock, ExprList elseBlock)
+      : cond(cond), thenBlock(thenBlock), elseBlock(elseBlock) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
 };
