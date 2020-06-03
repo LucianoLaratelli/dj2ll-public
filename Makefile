@@ -22,14 +22,15 @@ endif
 
 CSOURCES=ast.c symtbl.c typecheck.c util.c dj.tab.c typeErrors.c
 CXXSOURCES=codegen.cpp dj2ll.cpp llast.cpp translateAST.cpp
+OBJECTS=ast.o dj.tab.o symtbl.o typecheck.o typeErrors.o util.o
 
 dj2ll: lex.yy.c $(CSOURCES) $(CXXSOURCES)
 	$(CC)  $(CFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
-	$(CXX) $(CFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 *.o $(CXXSOURCES) -o dj2ll `llvm-config --cxxflags --ldflags --libs`
+	$(CXX)  $(CFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs all` $(OBJECTS) $(CXXSOURCES) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
 
 debug: lex.yy.c $(CSOURCES) $(CXXSOURCES)
 	$(CC)  $(DFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
-	$(CXX) $(DFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 *.o $(CXXSOURCES) -o dj2ll `llvm-config --cxxflags --ldflags --libs`
+	$(CXX)  $(DFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs all` $(OBJECTS) $(CXXSOURCES) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
 
 dj.tab.c: dj.y
 	$(BISON) dj.y

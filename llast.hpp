@@ -63,18 +63,30 @@ public:
   void print(int offset) override;
 };
 
-// class DJMinus : public DJExpression {
-//   DJExpression &lhs;
-//   DJExpression &rhs;
-//   DJMinus(DJExpression &lhs, DJExpression &rhs) : lhs(lhs), rhs(rhs) {}
-//   virtual llvm::Value *codeGen(CodeGenContext &context);
-// };
+class DJMinus : public DJExpression {
+public:
+  DJExpression *lhs;
+  DJExpression *rhs;
+  DJMinus(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
 
-// class DJTimes : public DJExpression {
-//   DJExpression &lhs;
-//   DJExpression &rhs;
-//   DJTimes(DJExpression &lhs, DJExpression &rhs) : lhs(lhs), rhs(rhs) {}
-//   virtual llvm::Value *codeGen(CodeGenContext &context);
-// };
+class DJTimes : public DJExpression {
+public:
+  DJExpression *lhs;
+  DJExpression *rhs;
+  DJTimes(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
+class DJPrint : public DJExpression {
+public:
+  DJExpression *printee;
+  DJPrint(DJExpression *printee) : printee(printee) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
 
 #endif // __LLAST_H_

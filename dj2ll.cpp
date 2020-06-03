@@ -15,6 +15,7 @@ int numMainBlockLocals;
 VarDecl *mainBlockST;
 int numClasses;
 ClassDecl *classesST;
+std::string inputFile;
 
 extern FILE *yyin;
 extern FILE *yyout;
@@ -34,6 +35,8 @@ int main(int argc, char **argv) {
   }
   std::string fileName = argv[1];
   std::string extension = fileName.substr(fileName.size() - 3, fileName.size());
+  inputFile = fileName.substr(0, fileName.size() - 3);
+  std::cout << inputFile << std::endl;
   if (extension != ".dj") {
     printf("ERROR: %s must be called on files ending with \".dj\"\n", argv[0]);
     exit(-1);
@@ -52,8 +55,9 @@ int main(int argc, char **argv) {
   // printAST(wholeProgram);
   auto LLProgram = translateAST(wholeProgram);
   // LLProgram.print();
-  TheModule = std::make_unique<llvm::Module>("dj2ll", TheContext);
   auto *IR = LLProgram.codeGen();
-  IR->print(llvm::errs());
+  // std::cout << "~~~~~~~~~~~~~~~\n";
+  // IR->print(llvm::errs());
+  // std::cout << "~~~~~~~~~~~~~~~\n";
   return 0;
 }

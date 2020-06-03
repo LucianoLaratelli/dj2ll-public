@@ -19,3 +19,20 @@ void DJPlus::print(int offset) {
   lhs->print(offset + 1);
   rhs->print(offset + 1);
 }
+
+void DJMinus::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ MINUS\n";
+  lhs->print(offset + 1);
+  rhs->print(offset + 1);
+}
+
+void DJTimes::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ TIMES\n";
+  lhs->print(offset + 1);
+  rhs->print(offset + 1);
+}
+
+void DJPrint::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ PRINT\n";
+  printee->print(offset + 1);
+}
