@@ -14,6 +14,14 @@ void DJNat::print(int offset) {
             << value << ")\n";
 }
 
+void DJFalse::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ FALSE\n";
+}
+
+void DJTrue::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ TRUE\n";
+}
+
 void DJPlus::print(int offset) {
   std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ PLUS\n";
   lhs->print(offset + 1);
@@ -35,4 +43,8 @@ void DJTimes::print(int offset) {
 void DJPrint::print(int offset) {
   std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ PRINT\n";
   printee->print(offset + 1);
+}
+
+void DJNot::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ NOT\n";
 }

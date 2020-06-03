@@ -152,3 +152,17 @@ Value *DJPrint::codeGen() {
 Value *DJNat::codeGen() {
   return ConstantInt::get(TheContext, APInt(32, value));
 }
+
+Value *DJNot::codeGen() {
+  Value *N = negated->codeGen();
+  if (!N) {
+    std::cout << LRED "codegen failure in DJNot::codeGen()\n Child tree:";
+    negated->print(0);
+    exit(-1);
+  }
+  return Builder.CreateNot(N);
+}
+
+Value *DJTrue::codeGen() { return ConstantInt::get(TheContext, APInt(1, 1)); }
+
+Value *DJFalse::codeGen() { return ConstantInt::get(TheContext, APInt(1, 0)); }

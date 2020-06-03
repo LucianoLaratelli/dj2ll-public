@@ -47,12 +47,21 @@ public:
   void print(int offset) override;
 };
 
-// class DJBool : public DJExpression {
-// public:
-//   bool value;
-//   DJBool(bool value) : value(value) {}
-//   virtual llvm::Value *codeGen(CodeGenContext &context);
-// };
+class DJFalse : public DJExpression {
+public:
+  // unsigned int value;
+  // DJFalse(unsigned int value) : value(value) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
+class DJTrue : public DJExpression {
+public:
+  // unsigned int value;
+  // DJTrue(unsigned int value) : value(value) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
 
 class DJPlus : public DJExpression {
 public:
@@ -85,6 +94,14 @@ class DJPrint : public DJExpression {
 public:
   DJExpression *printee;
   DJPrint(DJExpression *printee) : printee(printee) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
+class DJNot : public DJExpression {
+public:
+  DJExpression *negated;
+  DJNot(DJExpression *negated) : negated(negated) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
 };
