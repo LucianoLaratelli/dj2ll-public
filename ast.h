@@ -28,10 +28,11 @@ typedef enum {
   /* expression-lists: */
   EXPR_LIST,
   /* expressions: */
+  /*`B:` denotes a base case in the recursion*/
   DOT_METHOD_CALL_EXPR, /* E.ID(E) */
   METHOD_CALL_EXPR,     /* ID(E) */
-  DOT_ID_EXPR,          /* E.ID */
-  ID_EXPR,              /* ID */
+  DOT_ID_EXPR,          /* B: E.ID */
+  ID_EXPR,              /* B: ID */
   DOT_ASSIGN_EXPR,      /* E.ID = E */
   ASSIGN_EXPR,          /* ID = E */
   PLUS_EXPR,            /* E + E */
@@ -41,17 +42,17 @@ typedef enum {
   GREATER_THAN_EXPR,    /* E > E */
   NOT_EXPR,             /* !E */
   AND_EXPR,             /* E&&E */
-  INSTANCEOF_EXPR,      /* E instanceof ID */
+  INSTANCEOF_EXPR,      /* B: E instanceof ID */
   IF_THEN_ELSE_EXPR,    /* if(E) {Es} else {Es} */
   FOR_EXPR,             /* for(E;E;E) {Es} */
   PRINT_EXPR,           /* printNat(E) */
-  READ_EXPR,            /* readNat() */
-  THIS_EXPR,            /* this */
-  NEW_EXPR,             /* new */
-  NULL_EXPR,            /* null */
-  NAT_LITERAL_EXPR,     /* N */
-  TRUE_LITERAL_EXPR,    /* true */
-  FALSE_LITERAL_EXPR    /* false */
+  READ_EXPR,            /* B: readNat() */
+  THIS_EXPR,            /* B: this */
+  NEW_EXPR,             /* B: new */
+  NULL_EXPR,            /* B: null */
+  NAT_LITERAL_EXPR,     /* B: N */
+  TRUE_LITERAL_EXPR,    /* B: true */
+  FALSE_LITERAL_EXPR    /* B: false */
 } ASTNodeType;
 
 /* define a list of AST nodes */
