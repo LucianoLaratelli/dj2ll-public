@@ -77,3 +77,13 @@ void DJIf::print(int offset) {
     e->print(offset + 1);
   }
 }
+
+void DJFor::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ FOR\n";
+  init->print(offset + 1);
+  test->print(offset + 1);
+  cond->print(offset + 1);
+  for (auto &e : body) {
+    e->print(offset + 1);
+  }
+}

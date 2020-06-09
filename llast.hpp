@@ -137,4 +137,15 @@ public:
   void print(int offset) override;
 };
 
+class DJFor : public DJExpression {
+public:
+  DJExpression *init, *test, *cond;
+  ExprList body;
+  DJFor(DJExpression *init, DJExpression *test, DJExpression *cond,
+        ExprList body)
+      : init(init), test(test), cond(cond), body(body) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
 #endif // __LLAST_H_

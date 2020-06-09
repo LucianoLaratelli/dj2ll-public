@@ -55,7 +55,10 @@ Function *DJProgram::codeGen() {
   for (auto e : mainExprs) {
     last = e->codeGen();
   }
-  Builder.CreateRet(last);
+  Builder.CreateRet(last); /*done with code gen*/
+
+  llvm::Module *test = TheModule.get();
+  llvm::verifyModule(*test, &llvm::errs());
   std::cout << "****************\n";
   TheModule->print(outs(), nullptr);
   std::cout << "****************\n";
@@ -120,30 +123,15 @@ Function *DJProgram::codeGen() {
 }
 
 Value *DJPlus::codeGen() {
-  Value *L = lhs->codeGen();
-  Value *R = rhs->codeGen();
-  if (!L || !R) {
-    return nullptr;
-  }
-  return Builder.CreateAdd(L, R, "addtmp");
+  return Builder.CreateAdd(lhs->codeGen(), rhs->codeGen(), "addtmp");
 }
 
 Value *DJMinus::codeGen() {
-  Value *L = lhs->codeGen();
-  Value *R = rhs->codeGen();
-  if (!L || !R) {
-    return nullptr;
-  }
-  return Builder.CreateSub(L, R, "subtmp");
+  return Builder.CreateSub(lhs->codeGen(), rhs->codeGen(), "subtmp");
 }
 
 Value *DJTimes::codeGen() {
-  Value *L = lhs->codeGen();
-  Value *R = rhs->codeGen();
-  if (!L || !R) {
-    return nullptr;
-  }
-  return Builder.CreateMul(L, R, "multmp");
+  return Builder.CreateMul(lhs->codeGen(), rhs->codeGen(), "multmp");
 }
 
 Value *DJPrint::codeGen() {
@@ -165,41 +153,18 @@ Value *DJNat::codeGen() {
   return ConstantInt::get(TheContext, APInt(32, value));
 }
 
-Value *DJNot::codeGen() {
-  Value *N = negated->codeGen();
-  if (!N) {
-    std::cout << LRED "codegen failure in DJNot::codeGen()\n Child tree:";
-    negated->print(0);
-    exit(-1);
-  }
-  return Builder.CreateNot(N);
-}
+Value *DJNot::codeGen() { return Builder.CreateNot(negated->codeGen()); }
 
 Value *DJEqual::codeGen() {
-  Value *L = lhs->codeGen();
-  Value *R = rhs->codeGen();
-  if (!L || !R) {
-    return nullptr;
-  }
-  return Builder.CreateICmpEQ(L, R);
+  return Builder.CreateICmpEQ(lhs->codeGen(), rhs->codeGen());
 }
 
 Value *DJGreater::codeGen() {
-  Value *L = lhs->codeGen();
-  Value *R = rhs->codeGen();
-  if (!L || !R) {
-    return nullptr;
-  }
-  return Builder.CreateICmpUGT(L, R);
+  return Builder.CreateICmpUGT(lhs->codeGen(), rhs->codeGen());
 }
 
 Value *DJAnd::codeGen() {
-  Value *L = lhs->codeGen();
-  Value *R = rhs->codeGen();
-  if (!L || !R) {
-    return nullptr;
-  }
-  return Builder.CreateAnd(L, R);
+  return Builder.CreateAnd(lhs->codeGen(), rhs->codeGen());
 }
 
 Value *DJTrue::codeGen() { return ConstantInt::get(TheContext, APInt(1, 1)); }
@@ -209,7 +174,7 @@ Value *DJFalse::codeGen() { return ConstantInt::get(TheContext, APInt(1, 0)); }
 Value *DJIf::codeGen() {
   /*almost verbatim from LLVM kaleidescope tutorial; comments are not mine*/
   Value *condValue = cond->codeGen();
-  if (!cond) {
+  if (!condValue) {
     std::cerr << LRED "Failure in DJIf::codeGen() for condValue\n";
     exit(-1);
   }
@@ -255,4 +220,83 @@ Value *DJIf::codeGen() {
   PN->addIncoming(ThenV, ThenBB);
   PN->addIncoming(ElseV, ElseBB);
   return PN;
+}
+
+Value *DJFor::codeGen() // {
+                        // Value *StartVal = init->codeGen();
+                        // if (!StartVal)
+                        //   return nullptr;
+
+    // // Make the new basic block for the loop header, inserting after current
+    // // block.
+    // Function *TheFunction = Builder.GetInsertBlock()->getParent();
+    // BasicBlock *PreheaderBB = Builder.GetInsertBlock();
+    // BasicBlock *LoopBB = BasicBlock::Create(TheContext, "loop", TheFunction);
+
+    // // Insert an explicit fall through from the current block to the LoopBB.
+    // Builder.CreateBr(LoopBB);
+
+    // // Start insertion in LoopBB.
+    // Builder.SetInsertPoint(LoopBB);
+
+    // // Start the PHI node with an entry for Start.
+    // PHINode *Variable =
+    //     Builder.CreatePHI(Type::getDoubleTy(TheContext), 2, VarName);
+    // Variable->addIncoming(StartVal, PreheaderBB);
+
+    // // Within the loop, the variable is defined equal to the PHI node.  If it
+    // // shadows an existing variable, we have to restore it, so save it now.
+    // Value *OldVal = NamedValues[VarName];
+    // NamedValues[VarName] = Variable;
+
+    // // Emit the body of the loop.  This, like any other expr, can change the
+    // // current BB.  Note that we ignore the value computed by the body, but
+    // // don't allow an error.
+    // if (!body->codeGen())
+    //   return nullptr;
+
+    // // Emit the step value.
+    // Value *StepVal = nullptr;
+    // if (Step) {
+    //   StepVal = Step->codeGen();
+    //   if (!StepVal)
+    //     return nullptr;
+    // } else {
+    //   // If not specified, use 1.0.
+    //   StepVal = ConstantFP::get(TheContext, APFloat(1.0));
+    // }
+
+    // Value *NextVar = Builder.CreateFAdd(Variable, StepVal, "nextvar");
+
+    // // Compute the end condition.
+    // Value *EndCond = End->codeGen();
+    // if (!EndCond)
+    //   return nullptr;
+
+    // // Convert condition to a bool by comparing non-equal to 0.0.
+    // EndCond = Builder.CreateFCmpONE(
+    //     EndCond, ConstantFP::get(TheContext, APFloat(0.0)), "loopcond");
+
+    // // Create the "after loop" block and insert it.
+    // BasicBlock *LoopEndBB = Builder.GetInsertBlock();
+    // BasicBlock *AfterBB =
+    //     BasicBlock::Create(TheContext, "afterloop", TheFunction);
+
+    // // Insert the conditional branch into the end of LoopEndBB.
+    // Builder.CreateCondBr(EndCond, LoopBB, AfterBB);
+
+    // // Any new code will be inserted in AfterBB.
+    // Builder.SetInsertPoint(AfterBB);
+
+    // // Add a new entry to the PHI node for the backedge.
+    // Variable->addIncoming(NextVar, LoopEndBB);
+
+    // // Restore the unshadowed variable.
+    // if (OldVal)
+    //   NamedValues[VarName] = OldVal;
+    // else
+    //   NamedValues.erase(VarName);
+
+    // // for expr always returns 0.0.
+    return Constant::getNullValue(Type::getDoubleTy(TheContext));
 }
