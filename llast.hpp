@@ -139,11 +139,11 @@ public:
 
 class DJFor : public DJExpression {
 public:
-  DJExpression *init, *test, *cond;
+  DJExpression *init, *test, *update;
   ExprList body;
-  DJFor(DJExpression *init, DJExpression *test, DJExpression *cond,
+  DJFor(DJExpression *init, DJExpression *test, DJExpression *update,
         ExprList body)
-      : init(init), test(test), cond(cond), body(body) {}
+      : init(init), test(test), update(update), body(body) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
 };

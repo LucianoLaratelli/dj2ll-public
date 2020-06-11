@@ -54,5 +54,6 @@ int main(int argc, char **argv) {
 
   // printAST(wholeProgram);
   auto LLProgram = translateAST(wholeProgram);
+  LLProgram.print();
   LLProgram.codeGen();
 }
