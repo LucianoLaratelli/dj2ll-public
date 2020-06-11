@@ -247,12 +247,12 @@ Value *DJFor::codeGen() {
   BasicBlock *AfterBB =
       BasicBlock::Create(TheContext, "afterloop", TheFunction);
 
-  // Insert the conditional branch
-  Builder.CreateCondBr(testVal, BodyBB, AfterBB);
-
   // Convert condition to a bool by comparing non-equal to 0.0.
   testVal = Builder.CreateICmpNE(
       testVal, ConstantInt::get(TheContext, APInt(1, 0)), "loopcond");
+
+  // Insert the conditional branch
+  Builder.CreateCondBr(testVal, BodyBB, AfterBB);
 
   // Emit the body of the loop.  This, like any other expr, can change the
   // current BB.  Note that we ignore the value computed by the body
@@ -263,8 +263,11 @@ Value *DJFor::codeGen() {
 
   update->codeGen();
   testVal = test->codeGen();
+  // Convert condition to a bool by comparing non-equal to 0.0.
+  testVal = Builder.CreateICmpNE(
+      testVal, ConstantInt::get(TheContext, APInt(1, 0)), "loopcond");
 
-  // Create the "after loop" block and insert it.
+  // insert the "after loop" block
   Builder.GetInsertBlock();
 
   // Insert the conditional branch into the end of LoopEndBB.
