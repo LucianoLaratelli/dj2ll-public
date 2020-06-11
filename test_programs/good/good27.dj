@@ -1,3 +1,4 @@
+//-*-mode:java-*-
 //Reads natural numbers, prepending them into a linked list. 
 //Stops reading after a 0 is read.  At that point, the list is printed.
 
