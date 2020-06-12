@@ -1,3 +1,23 @@
+/*
+** codegen.cpp
+**
+** This file implements all of the codeGen methods for the expression nodes of
+** the LLAST. It also handles codeGen for an entire DJProgram:
+**     * setting up runtime functions, vtables, itables
+**     * verifying the generated IR Module
+**     * emitting object code to a target file whose name is the same as the
+**       source file but with a .o extension
+** In contrast to the LLVM Kaleidoscope tutorial, I have opted to not perform
+** null checks on any of the expressions. This is a deliberate choice to keep
+** the code cleaner; I don't believe any safety is sacrificed because all of the
+** base cases for the recursion (DOT_IDs, IDs, INSTANCEOFs, READs, THISs, NEWs,
+** NULLs, NAT_LITERALs, TRUE_LITERALs, and FALSE_LITERALs) depend on directly
+** utilizing LLVM API calls or the symbol table. Errors in the symbol table are
+** caught during type checking; I expect that a failure that would cause a null
+** pointer to arise during code generation for one of the base cases would
+** actually be caught by the LLVM API call itself.
+*/
+
 #include "codegen.hpp"
 
 #include "llast.hpp"
@@ -50,7 +70,7 @@ Function *DJProgram::codeGen() {
   Function::Create(printfType, Function::ExternalLinkage, "printf",
                    TheModule.get());
   /*emit runtime function `readNat()`, which is really just the system scanf*/
-  Function::Create(printfType, Function::ExternalLinkage, "__isoc99_scanf",
+  Function::Create(printfType, Function::ExternalLinkage, "scanf",
                    TheModule.get());
   // Function::Create(printfType, Function::ExternalLinkage, "scanf",
   //                  TheModule.get());
@@ -142,26 +162,22 @@ Value *DJTimes::codeGen() {
 
 Value *DJPrint::codeGen() {
   Value *P = printee->codeGen();
-  std::vector<Value *> ArgsV;
   Value *formatStr = Builder.CreateGlobalStringPtr("%u\n");
-  ArgsV.push_back(formatStr);
-  ArgsV.push_back(P);
+  std::vector<Value *> PrintfArgs = {formatStr, P};
   Function *TheFunction = TheModule->getFunction("printf");
-  Builder.CreateCall(TheFunction, ArgsV);
+  Builder.CreateCall(TheFunction, PrintfArgs);
   return P;
 }
 
 Value *DJRead::codeGen() {
-  Function *TheFunction = Builder.GetInsertBlock()->getParent();
-  std::vector<Value *> ArgsV;
+  Builder.GetInsertBlock()->getParent();
   Value *formatStr = Builder.CreateGlobalStringPtr("%u");
   AllocaInst *Alloca =
       Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, "temp");
   Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, 0)), Alloca);
-  ArgsV.push_back(formatStr);
-  ArgsV.push_back(Alloca);
-  Function *theScanf = TheModule->getFunction("__isoc99_scanf");
-  Builder.CreateCall(theScanf, ArgsV);
+  std::vector<Value *> scanfArgs = {formatStr, Alloca};
+  Function *theScanf = TheModule->getFunction("scanf");
+  Builder.CreateCall(theScanf, scanfArgs);
   return Builder.CreateLoad(Alloca);
 }
 
@@ -190,10 +206,6 @@ Value *DJFalse::codeGen() { return ConstantInt::get(TheContext, APInt(1, 0)); }
 Value *DJIf::codeGen() {
   /*almost verbatim from LLVM kaleidescope tutorial; comments are not mine*/
   Value *condValue = cond->codeGen();
-  if (!condValue) {
-    std::cerr << LRED "Failure in DJIf::codeGen() for condValue\n";
-    exit(-1);
-  }
   condValue = Builder.CreateICmpNE(condValue,
                                    ConstantInt::get(TheContext, APInt(1, 0)));
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
