@@ -64,7 +64,7 @@ void DJPrint::print(int offset) {
 }
 
 void DJRead::print(int offset) {
-  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ PRINT\n";
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ READ\n";
 }
 
 void DJNot::print(int offset) {

@@ -49,6 +49,11 @@ Function *DJProgram::codeGen() {
       FunctionType::get(Builder.getInt32Ty(), args, true);
   Function::Create(printfType, Function::ExternalLinkage, "printf",
                    TheModule.get());
+  /*emit runtime function `readNat()`, which is really just the system scanf*/
+  Function::Create(printfType, Function::ExternalLinkage, "__isoc99_scanf",
+                   TheModule.get());
+  // Function::Create(printfType, Function::ExternalLinkage, "scanf",
+  //                  TheModule.get());
   /*begin codegen for `main`*/
   Function *main = createFunc(Builder, "main");
   BasicBlock *entry = createBB(main, "entry");
@@ -138,7 +143,7 @@ Value *DJTimes::codeGen() {
 Value *DJPrint::codeGen() {
   Value *P = printee->codeGen();
   std::vector<Value *> ArgsV;
-  Value *formatStr = Builder.CreateGlobalStringPtr("%d\n");
+  Value *formatStr = Builder.CreateGlobalStringPtr("%u\n");
   ArgsV.push_back(formatStr);
   ArgsV.push_back(P);
   Function *TheFunction = TheModule->getFunction("printf");
@@ -146,7 +151,19 @@ Value *DJPrint::codeGen() {
   return P;
 }
 
-Value *DJRead::codeGen() { return ConstantInt::get(TheContext, APInt(32, 0)); }
+Value *DJRead::codeGen() {
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+  std::vector<Value *> ArgsV;
+  Value *formatStr = Builder.CreateGlobalStringPtr("%u");
+  AllocaInst *Alloca =
+      Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, "temp");
+  Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, 0)), Alloca);
+  ArgsV.push_back(formatStr);
+  ArgsV.push_back(Alloca);
+  Function *theScanf = TheModule->getFunction("__isoc99_scanf");
+  Builder.CreateCall(theScanf, ArgsV);
+  return Builder.CreateLoad(Alloca);
+}
 
 Value *DJNat::codeGen() {
   return ConstantInt::get(TheContext, APInt(32, value));
