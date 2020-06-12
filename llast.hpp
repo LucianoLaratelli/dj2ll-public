@@ -95,6 +95,12 @@ public:
   void print(int offset) override;
 };
 
+class DJRead : public DJExpression {
+public:
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
 class DJNot : public DJExpression {
 public:
   DJExpression *negated;

@@ -27,6 +27,7 @@ Function *createFunc(IRBuilder<> &Builder, std::string Name) {
                                        Name, TheModule.get());
   return fooFunc;
 }
+
 BasicBlock *createBB(Function *fooFunc, std::string Name) {
   return BasicBlock::Create(TheContext, Name, fooFunc);
 }
@@ -136,10 +137,6 @@ Value *DJTimes::codeGen() {
 
 Value *DJPrint::codeGen() {
   Value *P = printee->codeGen();
-  if (!P) {
-    std::cout << LRED "codegen failure in DJPrint::codeGen()\n";
-    return nullptr;
-  }
   std::vector<Value *> ArgsV;
   Value *formatStr = Builder.CreateGlobalStringPtr("%d\n");
   ArgsV.push_back(formatStr);
@@ -148,6 +145,8 @@ Value *DJPrint::codeGen() {
   Builder.CreateCall(TheFunction, ArgsV);
   return P;
 }
+
+Value *DJRead::codeGen() { return ConstantInt::get(TheContext, APInt(32, 0)); }
 
 Value *DJNat::codeGen() {
   return ConstantInt::get(TheContext, APInt(32, value));
