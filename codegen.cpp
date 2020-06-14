@@ -174,7 +174,6 @@ Value *DJRead::codeGen() {
   Value *formatStr = Builder.CreateGlobalStringPtr("%u");
   AllocaInst *Alloca =
       Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, "temp");
-  Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, 0)), Alloca);
   std::vector<Value *> scanfArgs = {formatStr, Alloca};
   Function *theScanf = TheModule->getFunction("scanf");
   Builder.CreateCall(theScanf, scanfArgs);
