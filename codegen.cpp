@@ -80,10 +80,16 @@ Function *DJProgram::codeGen() {
     char *varName = mainBlockST[i].varName;
     switch (mainBlockST[i].type) {
     case TYPE_NAT:
-      Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, varName);
+      NamedValues[varName] =
+          Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, varName);
+      Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, 0)),
+                          NamedValues[varName]);
       break;
     case TYPE_BOOL:
-      Builder.CreateAlloca(Type::getInt1Ty(TheContext), nullptr, varName);
+      NamedValues[varName] =
+          Builder.CreateAlloca(Type::getInt1Ty(TheContext), nullptr, varName);
+      Builder.CreateStore(ConstantInt::get(TheContext, APInt(1, 0)),
+                          NamedValues[varName]);
       break;
     default:
       // TODO: classes
@@ -322,6 +328,4 @@ Value *DJFor::codeGen() {
   return Constant::getNullValue(Type::getInt32Ty(TheContext));
 }
 
-Value *DJId::codeGen() {
-  return Constant::getIntegerValue(Type::getInt32Ty(TheContext), APInt(32, 0));
-}
+Value *DJId::codeGen() { return Builder.CreateLoad(NamedValues[ID], ID); }
