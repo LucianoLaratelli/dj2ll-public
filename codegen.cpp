@@ -171,6 +171,9 @@ Value *DJPrint::codeGen() {
 
 Value *DJRead::codeGen() {
   Builder.GetInsertBlock()->getParent();
+  Value *requestStr = Builder.CreateGlobalStringPtr("Enter a natural number: ");
+  std::vector<Value *> requestArgs = {requestStr};
+  Builder.CreateCall(TheModule->getFunction("printf"), requestArgs);
   Value *formatStr = Builder.CreateGlobalStringPtr("%u");
   AllocaInst *Alloca =
       Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, "temp");
