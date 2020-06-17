@@ -155,6 +155,7 @@ public:
 };
 
 class DJId : public DJExpression {
+public:
   std::string ID;
   DJId(char *ID) : ID(ID){};
   llvm::Value *codeGen() override;
