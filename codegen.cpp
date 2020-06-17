@@ -72,12 +72,24 @@ Function *DJProgram::codeGen() {
   /*emit runtime function `readNat()`, which is really just the system scanf*/
   Function::Create(printfType, Function::ExternalLinkage, "scanf",
                    TheModule.get());
-  // Function::Create(printfType, Function::ExternalLinkage, "scanf",
-  //                  TheModule.get());
   /*begin codegen for `main`*/
   Function *main = createFunc(Builder, "main");
   BasicBlock *entry = createBB(main, "entry");
   Builder.SetInsertPoint(entry);
+  for (int i = 0; i < numMainBlockLocals; i++) {
+    char *varName = mainBlockST[i].varName;
+    switch (mainBlockST[i].type) {
+    case TYPE_NAT:
+      Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, varName);
+      break;
+    case TYPE_BOOL:
+      Builder.CreateAlloca(Type::getInt1Ty(TheContext), nullptr, varName);
+      break;
+    default:
+      // TODO: classes
+      break;
+    }
+  }
   for (auto e : mainExprs) {
     last = e->codeGen();
   }
@@ -308,4 +320,8 @@ Value *DJFor::codeGen() {
 
   // for expr always returns 0.
   return Constant::getNullValue(Type::getInt32Ty(TheContext));
+}
+
+Value *DJId::codeGen() {
+  return Constant::getIntegerValue(Type::getInt32Ty(TheContext), APInt(32, 0));
 }
