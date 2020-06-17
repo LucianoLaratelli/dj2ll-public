@@ -30,6 +30,6 @@ static llvm::LLVMContext TheContext;
  * instructions*/
 static llvm::IRBuilder<> Builder(TheContext);
 /*TheModule contains all functions and variables in the source program*/
-static std::map<std::string, llvm::Value *> NamedValues;
+static std::map<std::string, llvm::AllocaInst *> NamedValues;
 
 #endif // __LLVM_INCLUDES_H_
