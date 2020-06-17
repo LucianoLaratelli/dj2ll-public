@@ -154,4 +154,11 @@ public:
   void print(int offset) override;
 };
 
+class DJId : public DJExpression {
+  std::string ID;
+  DJId(char *ID) : ID(ID){};
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
 #endif // __LLAST_H_

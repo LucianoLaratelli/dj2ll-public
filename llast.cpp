@@ -91,3 +91,8 @@ void DJFor::print(int offset) {
     e->print(offset + 1);
   }
 }
+
+void DJId::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ ID(" << ID
+            << ")\n";
+}
