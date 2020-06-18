@@ -24,6 +24,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Utils.h"
 
 static llvm::LLVMContext TheContext;
 /*Builder keeps track of where we are in the IR and helps us generate
@@ -31,5 +35,7 @@ static llvm::LLVMContext TheContext;
 static llvm::IRBuilder<> Builder(TheContext);
 /*TheModule contains all functions and variables in the source program*/
 static std::map<std::string, llvm::AllocaInst *> NamedValues;
+
+static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
 
 #endif // __LLVM_INCLUDES_H_

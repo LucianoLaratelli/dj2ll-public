@@ -54,6 +54,21 @@ BasicBlock *createBB(Function *fooFunc, std::string Name) {
 
 Function *DJProgram::codeGen() {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
+  // Create a new pass manager attached to it.
+  TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
+
+  // Promote allocas to registers.
+  TheFPM->add(createPromoteMemoryToRegisterPass());
+  // Do simple "peephole" optimizations and bit-twiddling optzns.
+  TheFPM->add(createInstructionCombiningPass());
+  // Reassociate expressions.
+  TheFPM->add(createReassociatePass());
+  // Eliminate Common SubExpressions.
+  TheFPM->add(createGVNPass());
+  // Simplify the control flow graph (deleting unreachable blocks, etc).
+  TheFPM->add(createCFGSimplificationPass());
+
+  TheFPM->doInitialization();
   Value *last = nullptr;
   // for (auto c : classes) {
   //   last = c->codeGen(context);
@@ -73,8 +88,8 @@ Function *DJProgram::codeGen() {
   Function::Create(printfType, Function::ExternalLinkage, "scanf",
                    TheModule.get());
   /*begin codegen for `main`*/
-  Function *main = createFunc(Builder, "main");
-  BasicBlock *entry = createBB(main, "entry");
+  Function *DJmain = createFunc(Builder, "main");
+  BasicBlock *entry = createBB(DJmain, "entry");
   Builder.SetInsertPoint(entry);
   for (int i = 0; i < numMainBlockLocals; i++) {
     char *varName = mainBlockST[i].varName;
@@ -100,7 +115,7 @@ Function *DJProgram::codeGen() {
     last = e->codeGen();
   }
   Builder.CreateRet(last); /*done with code gen*/
-
+  TheFPM->run(*DJmain);
   llvm::Module *test = TheModule.get();
   llvm::verifyModule(*test, &llvm::errs());
   std::cout << "****************\n";
@@ -163,7 +178,7 @@ Function *DJProgram::codeGen() {
 
   pass.run(*TheModule);
   dest.flush();
-  return main;
+  return DJmain;
 }
 
 Value *DJPlus::codeGen() {
