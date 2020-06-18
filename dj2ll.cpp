@@ -52,8 +52,6 @@ int main(int argc, char **argv) {
   setupSymbolTables(pgmAST);
   typecheckProgram();
 
-  // printAST(wholeProgram);
   auto LLProgram = translateAST(wholeProgram);
-  // LLProgram.print();
   LLProgram.codeGen();
 }
