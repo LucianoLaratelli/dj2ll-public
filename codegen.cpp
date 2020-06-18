@@ -76,6 +76,7 @@ Function *DJProgram::codeGen() {
   Function *main = createFunc(Builder, "main");
   BasicBlock *entry = createBB(main, "entry");
   Builder.SetInsertPoint(entry);
+  Builder.GetInsertBlock()->getParent();
   for (int i = 0; i < numMainBlockLocals; i++) {
     char *varName = mainBlockST[i].varName;
     switch (mainBlockST[i].type) {
@@ -329,3 +330,7 @@ Value *DJFor::codeGen() {
 }
 
 Value *DJId::codeGen() { return Builder.CreateLoad(NamedValues[ID], ID); }
+
+Value *DJAssign::codeGen() {
+  return Builder.CreateStore(RHS->codeGen(), NamedValues[LHS]);
+}
