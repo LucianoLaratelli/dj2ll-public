@@ -163,6 +163,11 @@ Function *DJProgram::codeGen() {
   for (auto e : mainExprs) {
     last = e->codeGen();
   }
+  // adjust main's return type if needed so we don't get a type mismatch when we
+  // verify the module
+  if (last->getType() != Type::getInt32Ty(TheContext)) {
+    last = ConstantInt::get(TheContext, APInt(32, 0));
+  }
   Builder.CreateRet(last); /*done with code gen*/
   // TheFPM->run(*DJmain);
   llvm::Module *test = TheModule.get();
@@ -192,7 +197,6 @@ Function *DJProgram::codeGen() {
   StringMap<bool> HostFeatures;
   if (!sys::getHostCPUFeatures(HostFeatures)) {
     std::cerr << LRED "Could not determine host CPU features.\n";
-
   } else {
     SubtargetFeatures TheFeatures;
     for (auto i : HostFeatures.keys()) {
