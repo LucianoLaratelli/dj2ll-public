@@ -98,6 +98,7 @@ void DJId::print(int offset) {
 }
 
 void DJAssign::print(int offset) {
+  // FIXME: look at printing behavior for a = new A()
   std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ ASSIGN\n";
   std::cout << std::string(4 * (offset + 1), ' ') << LHS << "\n";
   RHS->print(offset + 1);
@@ -111,3 +112,47 @@ void DJNew::print(int offset) {
   std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ NEW("
             << assignee << ")\n";
 }
+
+void DJDotId::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ DOT ID ("
+            << typeString(objectLikeType) << ", " << ID << "):\n";
+  objectLike->print(offset + 1);
+}
+
+std::string DJNat::className() { return "DJNat"; }
+
+std::string DJFalse::className() { return "DJFalse"; }
+
+std::string DJTrue::className() { return "DJTrue"; }
+
+std::string DJPlus::className() { return "DJPlus"; }
+
+std::string DJMinus::className() { return "DJMinus"; }
+
+std::string DJTimes::className() { return "DJTimes"; }
+
+std::string DJEqual::className() { return "DJEqual"; }
+
+std::string DJGreater::className() { return "DJGreater"; }
+
+std::string DJAnd::className() { return "DJAnd"; }
+
+std::string DJPrint::className() { return "DJPrint"; }
+
+std::string DJRead::className() { return "DJRead"; }
+
+std::string DJNot::className() { return "DJNot"; }
+
+std::string DJIf::className() { return "DJIf"; }
+
+std::string DJFor::className() { return "DJFor"; }
+
+std::string DJId::className() { return "DJId"; }
+
+std::string DJAssign::className() { return "DJAssign"; }
+
+std::string DJNull::className() { return "DJNull"; }
+
+std::string DJNew::className() { return "DJNew"; }
+
+std::string DJDotId::className() { return "DJDotId"; }

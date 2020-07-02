@@ -37,6 +37,7 @@ public:
 class DJExpression : public DJNode {
 public:
   virtual void print(int offset) = 0;
+  virtual std::string className() = 0;
 };
 
 class DJNat : public DJExpression {
@@ -45,6 +46,7 @@ public:
   DJNat(unsigned int value) : value(value) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJFalse : public DJExpression {
@@ -53,6 +55,7 @@ public:
   // DJFalse(unsigned int value) : value(value) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJTrue : public DJExpression {
@@ -61,6 +64,7 @@ public:
   // DJTrue(unsigned int value) : value(value) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJPlus : public DJExpression {
@@ -69,6 +73,7 @@ public:
   DJPlus(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJMinus : public DJExpression {
@@ -77,6 +82,7 @@ public:
   DJMinus(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJTimes : public DJExpression {
@@ -85,6 +91,7 @@ public:
   DJTimes(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJPrint : public DJExpression {
@@ -93,12 +100,14 @@ public:
   DJPrint(DJExpression *printee) : printee(printee) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJRead : public DJExpression {
 public:
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJNot : public DJExpression {
@@ -107,6 +116,7 @@ public:
   DJNot(DJExpression *negated) : negated(negated) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJEqual : public DJExpression {
@@ -115,6 +125,7 @@ public:
   DJEqual(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJGreater : public DJExpression {
@@ -123,6 +134,7 @@ public:
   DJGreater(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJAnd : public DJExpression {
@@ -131,6 +143,7 @@ public:
   DJAnd(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJIf : public DJExpression {
@@ -141,6 +154,7 @@ public:
       : cond(cond), thenBlock(thenBlock), elseBlock(elseBlock) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJFor : public DJExpression {
@@ -152,6 +166,7 @@ public:
       : init(init), test(test), update(update), body(body) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJId : public DJExpression {
@@ -160,6 +175,7 @@ public:
   DJId(char *ID) : ID(ID){};
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJAssign : public DJExpression {
@@ -169,12 +185,14 @@ public:
   DJAssign(char *LHS, DJExpression *RHS) : LHS(LHS), RHS(RHS) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJNull : public DJExpression {
 public:
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
 
 class DJNew : public DJExpression {
@@ -183,6 +201,21 @@ public:
   DJNew(char *assignee) : assignee(assignee) {}
   llvm::Value *codeGen() override;
   void print(int offset) override;
+  std::string className() override;
 };
+
+class DJDotId : public DJExpression {
+public:
+  DJExpression *objectLike;
+  int objectLikeType;
+  std::string ID;
+  DJDotId(DJExpression *objectLike, int objectLikeType, char *ID)
+      : objectLike(objectLike), objectLikeType(objectLikeType), ID(ID){};
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+  std::string className() override;
+};
+
+class DJDotAssign : public DJExpression {};
 
 #endif // __LLAST_H_
