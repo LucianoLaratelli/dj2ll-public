@@ -22,6 +22,7 @@
 
 #include "llast.hpp"
 #include "llvm_includes.hpp"
+#include "util.h"
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -36,6 +37,16 @@
 #include <system_error>
 #include <utility>
 #include <vector>
+
+int getNonStaticClassFieldIndex(std::string desired, int classIndex) {
+  auto ST = classesST[classIndex].varList;
+  for (int i = 0; i < classesST[classIndex].numVars; i++) {
+    if (std::string(ST[i].varName) == desired) {
+      return i;
+    }
+  }
+  return -1;
+}
 
 using namespace llvm;
 extern std::string inputFile;
@@ -417,5 +428,16 @@ Value *DJNew::codeGen() {
   auto I = CallInst::CreateMalloc(
       Builder.GetInsertBlock(), Type::getInt64Ty(TheContext),
       allocatedClasses[assignee], typeSize, nullptr, nullptr, "");
+  return Builder.Insert(I);
+}
+
+Value *DJDotId::codeGen() {
+  // TODO: implement for superclass vars
+  // TODO: implement for static vars
+  std::vector<Value *> elementIndex = {ConstantInt::get(
+      TheContext, APInt(32, getNonStaticClassFieldIndex(ID, objectLikeType)))};
+  auto I =
+      GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
+                                objectLike->codeGen(), elementIndex);
   return Builder.Insert(I);
 }
