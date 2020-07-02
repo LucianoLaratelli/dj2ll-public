@@ -216,6 +216,18 @@ public:
   std::string className() override;
 };
 
-class DJDotAssign : public DJExpression {};
+class DJDotAssign : public DJExpression {
+  DJExpression *objectLike;
+  int objectLikeType;
+  std::string ID;
+  DJExpression *assignVal;
+  DJDotAssign(DJExpression *objectLike, int objectLikeType, char *ID,
+              DJExpression *assignVal)
+      : objectLike(objectLike), objectLikeType(objectLikeType), ID(ID),
+        assignVal(assignVal){};
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+  std::string className() override;
+};
 
 #endif // __LLAST_H_
