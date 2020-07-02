@@ -5,7 +5,7 @@ CC=clang
 CXX=clang++
 CFLAGS=-O2
 ANNOY=-pedantic
-DFLAGS=-ggdb3 -O0
+DFLAGS=-ggdb3 -O0 -fstandalone-debug
 WFLAGS=-Wall -Wpointer-arith -Woverloaded-virtual -Werror=return-type		\
 -Werror=int-to-pointer-cast -Wtype-limits -Wempty-body -Wsign-compare		\
 -Wno-invalid-offsetof -Wno-c++0x-extensions -Wno-extended-offsetof			\
