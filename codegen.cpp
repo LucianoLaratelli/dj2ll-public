@@ -40,6 +40,37 @@
 using namespace llvm;
 extern std::string inputFile;
 
+std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds() {
+  std::map<std::string, std::vector<llvm::Type *>> ret;
+  for (int i = 1; i < numClasses; i++) {
+    std::vector<llvm::Type *> members;
+    for (int j = 0; j < classesST[i].numVars; j++) {
+      switch (classesST[i].varList[j].type) {
+      case BAD_TYPE:
+      case NO_OBJECT:
+      case ANY_OBJECT:
+        std::cerr
+            << "bad regular var encountered in calculateClassStorageNeeds\n";
+        exit(-1);
+      case TYPE_BOOL: {
+        members.push_back(Type::getInt1Ty(TheContext));
+        break;
+      }
+      case TYPE_NAT: {
+        members.push_back(Type::getInt32Ty(TheContext));
+        break;
+      }
+      default: { // all objects
+        members.push_back(Type::getInt32PtrTy(TheContext));
+        break;
+      }
+      }
+    }
+    ret[classesST[i].className] = members;
+  }
+  return ret;
+}
+
 static std::unique_ptr<Module> TheModule;
 Function *createFunc(IRBuilder<> &Builder, std::string Name) {
   FunctionType *funcType = FunctionType::get(Builder.getInt32Ty(), false);
@@ -51,6 +82,9 @@ Function *createFunc(IRBuilder<> &Builder, std::string Name) {
 BasicBlock *createBB(Function *fooFunc, std::string Name) {
   return BasicBlock::Create(TheContext, Name, fooFunc);
 }
+
+std::map<std::string, llvm::StructType *> allocatedClasses;
+std::map<std::string, std::vector<llvm::Type *>> classSizes;
 
 Function *DJProgram::codeGen() {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
@@ -70,6 +104,14 @@ Function *DJProgram::codeGen() {
 
   TheFPM->doInitialization();
   Value *last = nullptr;
+
+  classSizes = calculateClassStorageNeeds();
+  for (int i = 1; i < numClasses; i++) {
+    allocatedClasses[classesST[i].className] =
+        llvm::StructType::create(TheContext, classesST[i].className);
+    allocatedClasses[classesST[i].className]->setBody(
+        classSizes[classesST[i].className]);
+  }
   // for (auto c : classes) {
   //   last = c->codeGen(context);
   // }
@@ -107,7 +149,9 @@ Function *DJProgram::codeGen() {
                           NamedValues[varName]);
       break;
     default:
-      // TODO: classes
+      char *varType = typeString(mainBlockST[i].type);
+      NamedValues[varName] = Builder.CreateAlloca(
+          PointerType::get(allocatedClasses[varType], 0), NamedValues[varName]);
       break;
     }
   }
@@ -347,4 +391,12 @@ Value *DJId::codeGen() { return Builder.CreateLoad(NamedValues[ID], ID); }
 
 Value *DJAssign::codeGen() {
   return Builder.CreateStore(RHS->codeGen(), NamedValues[LHS]);
+}
+
+Value *DJNull::codeGen() {
+  return Constant::getNullValue(Type::getInt32PtrTy(TheContext));
+}
+
+Value *DJNew::codeGen() {
+  return Builder.CreateAlloca(allocatedClasses[assignee]);
 }
