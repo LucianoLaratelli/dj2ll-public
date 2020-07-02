@@ -129,6 +129,11 @@ Function *DJProgram::codeGen() {
   /*emit runtime function `readNat()`, which is really just the system scanf*/
   Function::Create(printfType, Function::ExternalLinkage, "scanf",
                    TheModule.get());
+  // std::vector<Type *> mallocArgs = {Type::getInt64Ty(TheContext)};
+  // FunctionType *mallocType =
+  //     FunctionType::get(Builder.getInt8Ty(), mallocArgs, false);
+  // Function::Create(mallocType, Function::ExternalLinkage, "malloc",
+  //                  TheModule.get());
   /*begin codegen for `main`*/
   Function *DJmain = createFunc(Builder, "main");
   BasicBlock *entry = createBB(DJmain, "entry");
@@ -159,7 +164,7 @@ Function *DJProgram::codeGen() {
     last = e->codeGen();
   }
   Builder.CreateRet(last); /*done with code gen*/
-  TheFPM->run(*DJmain);
+  // TheFPM->run(*DJmain);
   llvm::Module *test = TheModule.get();
   llvm::verifyModule(*test, &llvm::errs());
   std::cout << "****************\n";
@@ -267,6 +272,7 @@ Value *DJNat::codeGen() {
 Value *DJNot::codeGen() { return Builder.CreateNot(negated->codeGen()); }
 
 Value *DJEqual::codeGen() {
+  // TODO: may have to implement some hackery to get null working
   return Builder.CreateICmpEQ(lhs->codeGen(), rhs->codeGen());
 }
 
@@ -394,9 +400,18 @@ Value *DJAssign::codeGen() {
 }
 
 Value *DJNull::codeGen() {
-  return Constant::getNullValue(Type::getInt32PtrTy(TheContext));
+  // TODO: doesn't work, something like null == C for some class C fails because
+  // of null having a different type
+  return ConstantPointerNull::get(Builder.getVoidTy()->getPointerTo());
 }
 
 Value *DJNew::codeGen() {
-  return Builder.CreateAlloca(allocatedClasses[assignee]);
+  auto typeSize = ConstantExpr::getSizeOf(allocatedClasses[assignee]);
+  typeSize =
+      ConstantExpr::getTruncOrBitCast(typeSize, Type::getInt64Ty(TheContext));
+
+  auto I = CallInst::CreateMalloc(
+      Builder.GetInsertBlock(), Type::getInt64Ty(TheContext),
+      allocatedClasses[assignee], typeSize, nullptr, nullptr, "");
+  return Builder.Insert(I);
 }
