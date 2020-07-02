@@ -177,7 +177,7 @@ Function *DJProgram::codeGen() {
   // adjust main's return type if needed so we don't get a type mismatch when we
   // verify the module
   if (last->getType() != Type::getInt32Ty(TheContext)) {
-    last = ConstantInt::get(TheContext, APInt(32, 0));
+    // last = ConstantInt::get(TheContext, APInt(32, 0));
   }
   Builder.CreateRet(last); /*done with code gen*/
   // TheFPM->run(*DJmain);
@@ -434,10 +434,25 @@ Value *DJNew::codeGen() {
 Value *DJDotId::codeGen() {
   // TODO: implement for superclass vars
   // TODO: implement for static vars
-  std::vector<Value *> elementIndex = {ConstantInt::get(
-      TheContext, APInt(32, getNonStaticClassFieldIndex(ID, objectLikeType)))};
+  std::vector<Value *> elementIndex = {
+      ConstantInt::get(TheContext, APInt(32, 0)),
+      ConstantInt::get(TheContext, APInt(32, getNonStaticClassFieldIndex(
+                                                 ID, objectLikeType)))};
   auto I =
       GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
                                 objectLike->codeGen(), elementIndex);
-  return Builder.Insert(I);
+  Builder.Insert(I);
+  return Builder.CreateLoad(I);
+}
+
+Value *DJDotAssign::codeGen() {
+  std::vector<Value *> elementIndex = {
+      ConstantInt::get(TheContext, APInt(32, 0)),
+      ConstantInt::get(TheContext, APInt(32, getNonStaticClassFieldIndex(
+                                                 ID, objectLikeType)))};
+  auto I =
+      GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
+                                objectLike->codeGen(), elementIndex);
+  Builder.Insert(I);
+  return Builder.CreateStore(assignVal->codeGen(), I);
 }

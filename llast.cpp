@@ -119,6 +119,14 @@ void DJDotId::print(int offset) {
   objectLike->print(offset + 1);
 }
 
+void DJDotAssign::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ')
+            << "DJ DOT ASSIGN (" << typeString(objectLikeType) << ", " << ID
+            << "):\n";
+  objectLike->print(offset + 1);
+  assignVal->print(offset + 1);
+}
+
 std::string DJNat::className() { return "DJNat"; }
 
 std::string DJFalse::className() { return "DJFalse"; }
@@ -156,3 +164,5 @@ std::string DJNull::className() { return "DJNull"; }
 std::string DJNew::className() { return "DJNew"; }
 
 std::string DJDotId::className() { return "DJDotId"; }
+
+std::string DJDotAssign::className() { return "DJDotAssign"; }
