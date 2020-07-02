@@ -102,3 +102,12 @@ void DJAssign::print(int offset) {
   std::cout << std::string(4 * (offset + 1), ' ') << LHS << "\n";
   RHS->print(offset + 1);
 }
+
+void DJNull::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ NULL\n";
+}
+
+void DJNew::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ NEW("
+            << assignee << ")\n";
+}

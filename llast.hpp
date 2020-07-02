@@ -171,4 +171,18 @@ public:
   void print(int offset) override;
 };
 
+class DJNull : public DJExpression {
+public:
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
+class DJNew : public DJExpression {
+public:
+  std::string assignee;
+  DJNew(char *assignee) : assignee(assignee) {}
+  llvm::Value *codeGen() override;
+  void print(int offset) override;
+};
+
 #endif // __LLAST_H_
