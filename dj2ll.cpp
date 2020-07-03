@@ -29,9 +29,17 @@ struct CInterface {
 };
 
 int main(int argc, char **argv) {
+  bool codegen = true;
   if (argc < 2) {
     printf("Usage: %s filename\n", argv[0]);
     exit(-1);
+  } else if (argc == 3) {
+    if (std::string(argv[2]) == "--skip-codegen") {
+      codegen = false;
+    } else {
+      printf("I only know about the --skip-codegen flag.\n");
+      exit(-1);
+    }
   }
   std::string fileName = argv[1];
   std::string extension = fileName.substr(fileName.size() - 3, fileName.size());
@@ -41,6 +49,7 @@ int main(int argc, char **argv) {
     printf("ERROR: %s must be called on files ending with \".dj\"\n", argv[0]);
     exit(-1);
   }
+
   yyin = fopen(argv[1], "r");
   if (yyin == NULL) {
     printf("ERROR: could not open file %s\n", argv[1]);
@@ -52,8 +61,11 @@ int main(int argc, char **argv) {
   setupSymbolTables(pgmAST);
   typecheckProgram();
 
-  // printAST(wholeProgram);
+  //  printAST(wholeProgram);
   auto LLProgram = translateAST(wholeProgram);
   LLProgram.print();
-  LLProgram.codeGen();
+
+  if (codegen) {
+    LLProgram.codeGen();
+  }
 }
