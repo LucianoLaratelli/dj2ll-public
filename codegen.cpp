@@ -420,6 +420,9 @@ Value *DJId::codeGen(int type) {
 }
 
 Value *DJAssign::codeGen(int type) {
+  if (hasNullChild) {
+    return Builder.CreateStore(RHS->codeGen(LHSType), NamedValues[LHS]);
+  }
   return Builder.CreateStore(RHS->codeGen(), NamedValues[LHS]);
 }
 
@@ -430,7 +433,8 @@ Value *DJNull::codeGen(int type) {
     // compared to null, etc
     return Constant::getNullValue(Type::getInt32Ty(TheContext));
   }
-  return Constant::getNullValue(allocatedClasses[typeString(type)]);
+  return ConstantPointerNull::get(
+      PointerType::getUnqual(allocatedClasses[typeString(type)]));
 }
 
 Value *DJNew::codeGen(int type) {

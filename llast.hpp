@@ -190,8 +190,10 @@ public:
 class DJAssign : public DJExpression {
 public:
   std::string LHS;
+  int LHSType;
   DJExpression *RHS;
-  DJAssign(char *LHS, DJExpression *RHS) : LHS(LHS), RHS(RHS) {}
+  DJAssign(char *LHS, int LHSType, DJExpression *RHS)
+      : LHS(LHS), LHSType(LHSType), RHS(RHS) {}
   llvm::Value *codeGen(int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
