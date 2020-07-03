@@ -129,8 +129,9 @@ class DJEqual : public DJExpression {
 public:
   DJExpression *lhs, *rhs;
   bool bothNull;
-  std::pair<bool, int> leftNull;
-  std::pair<bool, int> rightNull;
+  bool leftNull;
+  bool rightNull;
+  int nonNullType;
   DJEqual(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
   llvm::Value *codeGen(int type = -1) override;
   void print(int offset = 0) override;

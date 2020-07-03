@@ -291,7 +291,14 @@ Value *DJNot::codeGen(int type) {
 
 Value *DJEqual::codeGen(int type) {
   // TODO: may have to implement some hackery to get null working
-  return Builder.CreateICmpEQ(lhs->codeGen(), rhs->codeGen());
+  if (bothNull || !hasNullChild) {
+    return Builder.CreateICmpEQ(lhs->codeGen(), rhs->codeGen());
+  }
+  if (leftNull) {
+    return Builder.CreateICmpEQ(lhs->codeGen(nonNullType), rhs->codeGen());
+  }
+  // right must be null, then
+  return Builder.CreateICmpEQ(lhs->codeGen(), rhs->codeGen(nonNullType));
 }
 
 Value *DJGreater::codeGen(int type) {
