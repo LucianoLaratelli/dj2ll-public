@@ -19,7 +19,6 @@
 */
 
 #include "codegen.hpp"
-
 #include "llast.hpp"
 #include "llvm_includes.hpp"
 #include "util.h"
@@ -50,6 +49,8 @@ int getNonStaticClassFieldIndex(std::string desired, int classIndex) {
 
 using namespace llvm;
 extern std::string inputFile;
+std::map<std::string, llvm::StructType *> allocatedClasses;
+std::map<std::string, std::vector<llvm::Type *>> classSizes;
 
 std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds() {
   std::map<std::string, std::vector<llvm::Type *>> ret;
@@ -72,7 +73,8 @@ std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds() {
         break;
       }
       default: { // all objects
-        members.push_back(Type::getInt32PtrTy(TheContext));
+        members.push_back(PointerType::getUnqual(
+            allocatedClasses[typeString(classesST[i].varList[j].type)]));
         break;
       }
       }
@@ -94,10 +96,7 @@ BasicBlock *createBB(Function *fooFunc, std::string Name) {
   return BasicBlock::Create(TheContext, Name, fooFunc);
 }
 
-std::map<std::string, llvm::StructType *> allocatedClasses;
-std::map<std::string, std::vector<llvm::Type *>> classSizes;
-
-Function *DJProgram::codeGen() {
+Function *DJProgram::codeGen(int type) {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
   // Create a new pass manager attached to it.
   TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
@@ -116,10 +115,12 @@ Function *DJProgram::codeGen() {
   TheFPM->doInitialization();
   Value *last = nullptr;
 
-  classSizes = calculateClassStorageNeeds();
   for (int i = 1; i < numClasses; i++) {
     allocatedClasses[classesST[i].className] =
         llvm::StructType::create(TheContext, classesST[i].className);
+  }
+  classSizes = calculateClassStorageNeeds();
+  for (int i = 1; i < numClasses; i++) {
     allocatedClasses[classesST[i].className]->setBody(
         classSizes[classesST[i].className]);
   }
@@ -245,19 +246,19 @@ Function *DJProgram::codeGen() {
   return DJmain;
 }
 
-Value *DJPlus::codeGen() {
+Value *DJPlus::codeGen(int type) {
   return Builder.CreateAdd(lhs->codeGen(), rhs->codeGen(), "addtmp");
 }
 
-Value *DJMinus::codeGen() {
+Value *DJMinus::codeGen(int type) {
   return Builder.CreateSub(lhs->codeGen(), rhs->codeGen(), "subtmp");
 }
 
-Value *DJTimes::codeGen() {
+Value *DJTimes::codeGen(int type) {
   return Builder.CreateMul(lhs->codeGen(), rhs->codeGen(), "multmp");
 }
 
-Value *DJPrint::codeGen() {
+Value *DJPrint::codeGen(int type) {
   Value *P = printee->codeGen();
   Value *formatStr = Builder.CreateGlobalStringPtr("%u\n");
   std::vector<Value *> PrintfArgs = {formatStr, P};
@@ -266,7 +267,7 @@ Value *DJPrint::codeGen() {
   return P;
 }
 
-Value *DJRead::codeGen() {
+Value *DJRead::codeGen(int type) {
   Builder.GetInsertBlock()->getParent();
   Value *requestStr = Builder.CreateGlobalStringPtr("Enter a natural number: ");
   std::vector<Value *> requestArgs = {requestStr};
@@ -280,30 +281,36 @@ Value *DJRead::codeGen() {
   return Builder.CreateLoad(Alloca);
 }
 
-Value *DJNat::codeGen() {
+Value *DJNat::codeGen(int type) {
   return ConstantInt::get(TheContext, APInt(32, value));
 }
 
-Value *DJNot::codeGen() { return Builder.CreateNot(negated->codeGen()); }
+Value *DJNot::codeGen(int type) {
+  return Builder.CreateNot(negated->codeGen());
+}
 
-Value *DJEqual::codeGen() {
+Value *DJEqual::codeGen(int type) {
   // TODO: may have to implement some hackery to get null working
   return Builder.CreateICmpEQ(lhs->codeGen(), rhs->codeGen());
 }
 
-Value *DJGreater::codeGen() {
+Value *DJGreater::codeGen(int type) {
   return Builder.CreateICmpUGT(lhs->codeGen(), rhs->codeGen());
 }
 
-Value *DJAnd::codeGen() {
+Value *DJAnd::codeGen(int type) {
   return Builder.CreateAnd(lhs->codeGen(), rhs->codeGen());
 }
 
-Value *DJTrue::codeGen() { return ConstantInt::get(TheContext, APInt(1, 1)); }
+Value *DJTrue::codeGen(int type) {
+  return ConstantInt::get(TheContext, APInt(1, 1));
+}
 
-Value *DJFalse::codeGen() { return ConstantInt::get(TheContext, APInt(1, 0)); }
+Value *DJFalse::codeGen(int type) {
+  return ConstantInt::get(TheContext, APInt(1, 0));
+}
 
-Value *DJIf::codeGen() {
+Value *DJIf::codeGen(int type) {
   /*almost verbatim from LLVM kaleidescope tutorial; comments are not mine*/
   Value *condValue = cond->codeGen();
   condValue = Builder.CreateICmpNE(condValue,
@@ -350,7 +357,7 @@ Value *DJIf::codeGen() {
   return PN;
 }
 
-Value *DJFor::codeGen() {
+Value *DJFor::codeGen(int type) {
   /*pretty similar to kaleidescope example; some modification to actually work
    * like a for loop should, unlike the one in the tutorial*/
 
@@ -408,19 +415,25 @@ Value *DJFor::codeGen() {
   return Constant::getNullValue(Type::getInt32Ty(TheContext));
 }
 
-Value *DJId::codeGen() { return Builder.CreateLoad(NamedValues[ID], ID); }
+Value *DJId::codeGen(int type) {
+  return Builder.CreateLoad(NamedValues[ID], ID);
+}
 
-Value *DJAssign::codeGen() {
+Value *DJAssign::codeGen(int type) {
   return Builder.CreateStore(RHS->codeGen(), NamedValues[LHS]);
 }
 
-Value *DJNull::codeGen() {
-  // TODO: doesn't work, something like null == C for some class C fails because
-  // of null having a different type
-  return ConstantPointerNull::get(Builder.getVoidTy()->getPointerTo());
+Value *DJNull::codeGen(int type) {
+  if (type == -1) {
+    // case where null is not compared or assigned to a variable of object type,
+    // we can simply return a null int. this also covers the case where null is
+    // compared to null, etc
+    return Constant::getNullValue(Type::getInt32Ty(TheContext));
+  }
+  return Constant::getNullValue(allocatedClasses[typeString(type)]);
 }
 
-Value *DJNew::codeGen() {
+Value *DJNew::codeGen(int type) {
   auto typeSize = ConstantExpr::getSizeOf(allocatedClasses[assignee]);
   typeSize =
       ConstantExpr::getTruncOrBitCast(typeSize, Type::getInt64Ty(TheContext));
@@ -431,7 +444,7 @@ Value *DJNew::codeGen() {
   return Builder.Insert(I);
 }
 
-Value *DJDotId::codeGen() {
+Value *DJDotId::codeGen(int type) {
   // TODO: implement for superclass vars
   // TODO: implement for static vars
   std::vector<Value *> elementIndex = {
@@ -445,14 +458,25 @@ Value *DJDotId::codeGen() {
   return Builder.CreateLoad(I);
 }
 
-Value *DJDotAssign::codeGen() {
+Value *DJDotAssign::codeGen(int type) {
   std::vector<Value *> elementIndex = {
       ConstantInt::get(TheContext, APInt(32, 0)),
       ConstantInt::get(TheContext, APInt(32, getNonStaticClassFieldIndex(
                                                  ID, objectLikeType)))};
+  if (hasNullChild) {
+    auto I =
+        GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
+                                  objectLike->codeGen(), elementIndex);
+    Builder.Insert(I);
+    auto ret = assignVal->codeGen(objectLikeType);
+    Builder.CreateStore(ret, I);
+    return ret;
+  }
   auto I =
       GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
                                 objectLike->codeGen(), elementIndex);
   Builder.Insert(I);
-  return Builder.CreateStore(assignVal->codeGen(), I);
+  auto ret = assignVal->codeGen();
+  Builder.CreateStore(ret, I);
+  return ret;
 }
