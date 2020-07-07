@@ -54,8 +54,10 @@ std::map<std::string, std::vector<llvm::Type *>> classSizes;
 
 std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds() {
   std::map<std::string, std::vector<llvm::Type *>> ret;
-  for (int i = 1; i < numClasses; i++) {
-    std::vector<llvm::Type *> members;
+  std::vector<llvm::Type *> members;
+  for (int i = 0; i < numClasses; i++) {
+    members.push_back(
+        PointerType::getUnqual(allocatedClasses[classesST[i].className]));
     for (int j = 0; j < classesST[i].numVars; j++) {
       switch (classesST[i].varList[j].type) {
       case BAD_TYPE:
@@ -80,6 +82,7 @@ std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds() {
       }
     }
     ret[classesST[i].className] = members;
+    members.clear();
   }
   return ret;
 }
@@ -115,12 +118,12 @@ Function *DJProgram::codeGen(int type) {
   TheFPM->doInitialization();
   Value *last = nullptr;
 
-  for (int i = 1; i < numClasses; i++) {
+  for (int i = 0; i < numClasses; i++) {
     allocatedClasses[classesST[i].className] =
         llvm::StructType::create(TheContext, classesST[i].className);
   }
   classSizes = calculateClassStorageNeeds();
-  for (int i = 1; i < numClasses; i++) {
+  for (int i = 0; i < numClasses; i++) {
     allocatedClasses[classesST[i].className]->setBody(
         classSizes[classesST[i].className]);
   }
@@ -141,11 +144,6 @@ Function *DJProgram::codeGen(int type) {
   /*emit runtime function `readNat()`, which is really just the system scanf*/
   Function::Create(printfType, Function::ExternalLinkage, "scanf",
                    TheModule.get());
-  // std::vector<Type *> mallocArgs = {Type::getInt64Ty(TheContext)};
-  // FunctionType *mallocType =
-  //     FunctionType::get(Builder.getInt8Ty(), mallocArgs, false);
-  // Function::Create(mallocType, Function::ExternalLinkage, "malloc",
-  //                  TheModule.get());
   /*begin codegen for `main`*/
   Function *DJmain = createFunc(Builder, "main");
   BasicBlock *entry = createBB(DJmain, "entry");
@@ -168,7 +166,9 @@ Function *DJProgram::codeGen(int type) {
     default:
       char *varType = typeString(mainBlockST[i].type);
       NamedValues[varName] = Builder.CreateAlloca(
-          PointerType::get(allocatedClasses[varType], 0), NamedValues[varName]);
+          PointerType::getUnqual(allocatedClasses[varType]),
+          // PointerType::get(allocatedClasses[varType],0),
+          NamedValues[varName]);
       break;
     }
   }
@@ -178,7 +178,7 @@ Function *DJProgram::codeGen(int type) {
   // adjust main's return type if needed so we don't get a type mismatch when we
   // verify the module
   if (last->getType() != Type::getInt32Ty(TheContext)) {
-    // last = ConstantInt::get(TheContext, APInt(32, 0));
+    last = ConstantInt::get(TheContext, APInt(32, 0));
   }
   Builder.CreateRet(last); /*done with code gen*/
   // TheFPM->run(*DJmain);
