@@ -460,8 +460,10 @@ Value *DJDotId::codeGen(int type) {
   // TODO: implement for static vars
   std::vector<Value *> elementIndex = {
       ConstantInt::get(TheContext, APInt(32, 0)),
-      ConstantInt::get(TheContext, APInt(32, getNonStaticClassFieldIndex(
-                                                 ID, objectLikeType)))};
+      ConstantInt::get(
+          TheContext,
+          /*add 1 to offset from the `this` pointer*/
+          APInt(32, getNonStaticClassFieldIndex(ID, objectLikeType) + 1))};
   auto I =
       GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
                                 objectLike->codeGen(), elementIndex);
@@ -472,8 +474,10 @@ Value *DJDotId::codeGen(int type) {
 Value *DJDotAssign::codeGen(int type) {
   std::vector<Value *> elementIndex = {
       ConstantInt::get(TheContext, APInt(32, 0)),
-      ConstantInt::get(TheContext, APInt(32, getNonStaticClassFieldIndex(
-                                                 ID, objectLikeType)))};
+      ConstantInt::get(
+          TheContext,
+          /*add 1 to offset from the `this` pointer*/
+          APInt(32, getNonStaticClassFieldIndex(ID, objectLikeType) + 1))};
   if (hasNullChild) {
     auto I =
         GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
