@@ -127,6 +127,40 @@ Function *DJProgram::codeGen(int type) {
     allocatedClasses[classesST[i].className]->setBody(
         classSizes[classesST[i].className]);
   }
+  // emit static variable declarations
+  // DJ treats static variables the way java does, as globals that are specific
+  // to any object of that class, even if that object does not exist; (new
+  // A()).a accesses the same object as allocatedA.a
+  for (int i = 0; i < numClasses; i++) {
+    for (int j = 0; j < classesST[i].numStaticVars; j++) {
+      auto var = classesST[i].staticVarList[j];
+      /*the class that declares this static variable*/
+      auto declaredClass = std::string(classesST[i].className);
+      auto name = declaredClass + "." + var.varName;
+      switch (var.type) {
+      case TYPE_NAT:
+        GlobalValues[name] = new GlobalVariable(
+            *TheModule.get(), Type::getInt32Ty(TheContext), false,
+            llvm::GlobalValue::LinkageTypes::CommonLinkage, 0, name);
+        GlobalValues[name]->setInitializer(
+            ConstantInt::get(TheContext, APInt(32, 0)));
+        break;
+      case TYPE_BOOL:
+        GlobalValues[name] = new GlobalVariable(
+            *TheModule.get(), Type::getInt1Ty(TheContext), false,
+            llvm::GlobalValue::LinkageTypes::CommonLinkage, 0, name);
+        GlobalValues[name]->setInitializer(
+            ConstantInt::get(TheContext, APInt(1, 0)));
+        break;
+      default:
+        GlobalValues[name] = new GlobalVariable(
+            *TheModule.get(),
+            // allocatedClasses[declaredClass],
+            PointerType::getUnqual(allocatedClasses[declaredClass]), false,
+            GlobalValue::LinkageTypes::CommonLinkage, 0, name);
+      }
+    }
+  }
   // for (auto c : classes) {
   //   last = c->codeGen(context);
   // }
@@ -134,7 +168,8 @@ Function *DJProgram::codeGen(int type) {
   //   last = m->codeGen(context);
   // }
 
-  /*emit runtime function `printNat()`, which is really just the system printf*/
+  /*emit runtime function `printNat()`, which is really just the system
+   * printf*/
   std::vector<Type *> args;
   args.push_back(Type::getInt8PtrTy(TheContext));
   FunctionType *printfType =
@@ -175,8 +210,8 @@ Function *DJProgram::codeGen(int type) {
   for (auto e : mainExprs) {
     last = e->codeGen();
   }
-  // adjust main's return type if needed so we don't get a type mismatch when we
-  // verify the module
+  // adjust main's return type if needed so we don't get a type mismatch when
+  // we verify the module
   if (last->getType() != Type::getInt32Ty(TheContext)) {
     last = ConstantInt::get(TheContext, APInt(32, 0));
   }
@@ -324,8 +359,8 @@ Value *DJIf::codeGen(int type) {
                                    ConstantInt::get(TheContext, APInt(1, 0)));
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
-  // Create blocks for the then and else cases.  Insert the 'then' block at the
-  // end of the function.
+  // Create blocks for the then and else cases.  Insert the 'then' block at
+  // the end of the function.
   BasicBlock *ThenBB = BasicBlock::Create(TheContext, "then", TheFunction);
   BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
   BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
@@ -340,7 +375,8 @@ Value *DJIf::codeGen(int type) {
   }
 
   Builder.CreateBr(MergeBB);
-  // Codegen of 'Then' can change the current block, update ThenBB for the PHI.
+  // Codegen of 'Then' can change the current block, update ThenBB for the
+  // PHI.
   ThenBB = Builder.GetInsertBlock();
   // Emit else block.
   TheFunction->getBasicBlockList().push_back(ElseBB);
@@ -352,7 +388,8 @@ Value *DJIf::codeGen(int type) {
   }
 
   Builder.CreateBr(MergeBB);
-  // codegen of 'Else' can change the current block, update ElseBB for the PHI.
+  // codegen of 'Else' can change the current block, update ElseBB for the
+  // PHI.
   ElseBB = Builder.GetInsertBlock();
   // Emit merge block.
   TheFunction->getBasicBlockList().push_back(MergeBB);
@@ -435,9 +472,9 @@ Value *DJAssign::codeGen(int type) {
 
 Value *DJNull::codeGen(int type) {
   if (type == -1) {
-    // case where null is not compared or assigned to a variable of object type,
-    // we can simply return a null int. this also covers the case where null is
-    // compared to null, etc
+    // case where null is not compared or assigned to a variable of object
+    // type, we can simply return a null int. this also covers the case where
+    // null is compared to null, etc
     return Constant::getNullValue(Type::getInt32Ty(TheContext));
   }
   return ConstantPointerNull::get(
