@@ -57,41 +57,6 @@ llvm::BasicBlock *createBB(llvm::Function *fooFunc, std::string Name) {
   return llvm::BasicBlock::Create(TheContext, Name, fooFunc);
 }
 
-std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds() {
-  std::map<std::string, std::vector<llvm::Type *>> ret;
-  std::vector<llvm::Type *> members;
-  for (int i = 0; i < numClasses; i++) {
-    members.push_back(
-        PointerType::getUnqual(allocatedClasses[classesST[i].className]));
-    for (int j = 0; j < classesST[i].numVars; j++) {
-      switch (classesST[i].varList[j].type) {
-      case BAD_TYPE:
-      case NO_OBJECT:
-      case ANY_OBJECT:
-        std::cerr
-            << "bad regular var encountered in calculateClassStorageNeeds\n";
-        exit(-1);
-      case TYPE_BOOL: {
-        members.push_back(Type::getInt1Ty(TheContext));
-        break;
-      }
-      case TYPE_NAT: {
-        members.push_back(Type::getInt32Ty(TheContext));
-        break;
-      }
-      default: { // all objects
-        members.push_back(PointerType::getUnqual(
-            allocatedClasses[typeString(classesST[i].varList[j].type)]));
-        break;
-      }
-      }
-    }
-    ret[classesST[i].className] = members;
-    members.clear();
-  }
-  return ret;
-}
-
 Function *DJProgram::codeGen(int type) {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
   // Create a new pass manager attached to it.
@@ -115,7 +80,7 @@ Function *DJProgram::codeGen(int type) {
     allocatedClasses[classesST[i].className] =
         llvm::StructType::create(TheContext, classesST[i].className);
   }
-  classSizes = calculateClassStorageNeeds();
+  classSizes = calculateClassStorageNeeds(allocatedClasses);
   for (int i = 0; i < numClasses; i++) {
     allocatedClasses[classesST[i].className]->setBody(
         classSizes[classesST[i].className]);
@@ -318,7 +283,6 @@ Value *DJNot::codeGen(int type) {
 }
 
 Value *DJEqual::codeGen(int type) {
-  // TODO: may have to implement some hackery to get null working
   if (bothNull || !hasNullChild) {
     return Builder.CreateICmpEQ(lhs->codeGen(), rhs->codeGen());
   }
@@ -486,7 +450,6 @@ Value *DJNew::codeGen(int type) {
 }
 
 Value *DJDotId::codeGen(int type) {
-  // TODO: implement for superclass vars
   auto varInfo = varIsStaticInAnySuperClass(ID, objectLikeType);
   if (varInfo.first) {
     // because of subtyping, the program may be talking about A.b (where A
