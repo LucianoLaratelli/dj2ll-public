@@ -21,7 +21,7 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 CSOURCES=ast.c symtbl.c typecheck.c util.c dj.tab.c typeErrors.c
-CXXSOURCES=codegen.cpp dj2ll.cpp llast.cpp translateAST.cpp
+CXXSOURCES=codegen.cpp codeGenClass.cpp dj2ll.cpp llast.cpp translateAST.cpp
 OBJECTS=ast.o dj.tab.o symtbl.o typecheck.o typeErrors.o util.o
 
 dj2ll: lex.yy.c $(CSOURCES) $(CXXSOURCES)

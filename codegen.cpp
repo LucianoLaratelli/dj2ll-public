@@ -19,6 +19,7 @@
 */
 
 #include "codegen.hpp"
+#include "codeGenClass.hpp"
 #include "llast.hpp"
 #include "llvm_includes.hpp"
 #include "util.h"
@@ -157,7 +158,7 @@ Function *DJProgram::codeGen(int type) {
             *TheModule.get(),
             // allocatedClasses[declaredClass],
             PointerType::getUnqual(allocatedClasses[declaredClass]), false,
-            GlobalValue::LinkageTypes::CommonLinkage, 0, name);
+            GlobalValue::LinkageTypes::ExternalLinkage, 0, name);
       }
     }
   }
@@ -494,18 +495,25 @@ Value *DJNew::codeGen(int type) {
 
 Value *DJDotId::codeGen(int type) {
   // TODO: implement for superclass vars
-  // TODO: implement for static vars
-  std::vector<Value *> elementIndex = {
-      ConstantInt::get(TheContext, APInt(32, 0)),
-      ConstantInt::get(
-          TheContext,
-          /*add 1 to offset from the `this` pointer*/
-          APInt(32, getNonStaticClassFieldIndex(ID, objectLikeType) + 1))};
-  auto I =
-      GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
-                                objectLike->codeGen(), elementIndex);
-  Builder.Insert(I);
-  return Builder.CreateLoad(I);
+  auto varInfo = varIsStaticInAnySuperClass(ID, objectLikeType);
+  if (varInfo.first) {
+    auto actualID = varInfo.second + "." + ID;
+    auto requestedID = std::string(typeString(objectLikeType)) + "." + ID;
+    return Builder.CreateLoad(GlobalValues[actualID], requestedID);
+  } else {
+
+    std::vector<Value *> elementIndex = {
+        ConstantInt::get(TheContext, APInt(32, 0)),
+        ConstantInt::get(
+            TheContext,
+            /*add 1 to offset from the `this` pointer*/
+            APInt(32, getNonStaticClassFieldIndex(ID, objectLikeType) + 1))};
+    auto I =
+        GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
+                                  objectLike->codeGen(), elementIndex);
+    Builder.Insert(I);
+    return Builder.CreateLoad(I);
+  }
 }
 
 Value *DJDotAssign::codeGen(int type) {
