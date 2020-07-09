@@ -9,4 +9,10 @@ std::pair<bool, std::string> varIsStaticInAnySuperClass(std::string ID,
                                                         int classNum);
 int findClassNumOfStaticVar(std::string ID);
 
+bool isVarRegularInClass(std::string ID, int classNum);
+
+int getIndexOfRegularField(std::string desired, int classIndex);
+
+int getIndexOfRegularOrInheritedField(std::string ID, int classNum);
+
 #endif // __CODEGENCLASS_HPP_

@@ -38,16 +38,6 @@
 #include <utility>
 #include <vector>
 
-int getNonStaticClassFieldIndex(std::string desired, int classIndex) {
-  auto ST = classesST[classIndex].varList;
-  for (int i = 0; i < classesST[classIndex].numVars; i++) {
-    if (std::string(ST[i].varName) == desired) {
-      return i;
-    }
-  }
-  return -1;
-}
-
 using namespace llvm;
 extern std::string inputFile;
 std::map<std::string, llvm::StructType *> allocatedClasses;
@@ -497,17 +487,20 @@ Value *DJDotId::codeGen(int type) {
   // TODO: implement for superclass vars
   auto varInfo = varIsStaticInAnySuperClass(ID, objectLikeType);
   if (varInfo.first) {
+    // because of subtyping, the program may be talking about A.b (where A
+    // extends B) and b is actually a static field of class B. varIsStatic...
+    // checks the entire superclass hierarchy of the class called in the program
+    // (in this example, class A) to determine which class actually declared the
+    // static variable
     auto actualID = varInfo.second + "." + ID;
-    auto requestedID = std::string(typeString(objectLikeType)) + "." + ID;
-    return Builder.CreateLoad(GlobalValues[actualID], requestedID);
+    return Builder.CreateLoad(GlobalValues[actualID]);
   } else {
-
     std::vector<Value *> elementIndex = {
         ConstantInt::get(TheContext, APInt(32, 0)),
         ConstantInt::get(
             TheContext,
             /*add 1 to offset from the `this` pointer*/
-            APInt(32, getNonStaticClassFieldIndex(ID, objectLikeType) + 1))};
+            APInt(32, getIndexOfRegularOrInheritedField(ID, objectLikeType)))};
     auto I =
         GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
                                   objectLike->codeGen(), elementIndex);
@@ -517,26 +510,36 @@ Value *DJDotId::codeGen(int type) {
 }
 
 Value *DJDotAssign::codeGen(int type) {
-  std::vector<Value *> elementIndex = {
-      ConstantInt::get(TheContext, APInt(32, 0)),
-      ConstantInt::get(
-          TheContext,
-          /*add 1 to offset from the `this` pointer*/
-          APInt(32, getNonStaticClassFieldIndex(ID, objectLikeType) + 1))};
-  if (hasNullChild) {
+  auto varInfo = varIsStaticInAnySuperClass(ID, objectLikeType);
+  auto ret = assignVal->codeGen();
+  if (varInfo.first) {
+    // because of subtyping, the program may be talking about A.b (where A
+    // extends B) and b is actually a static field of class B. varIsStatic...
+    // checks the entire superclass hierarchy of the class called in the program
+    // (in this example, class A) to determine which class actually declared the
+    // static variable
+    auto actualID = varInfo.second + "." + ID;
+    Builder.CreateStore(ret, GlobalValues[actualID]);
+  } else {
+    std::vector<Value *> elementIndex = {
+        ConstantInt::get(TheContext, APInt(32, 0)),
+        ConstantInt::get(
+            TheContext,
+            APInt(32, getIndexOfRegularOrInheritedField(ID, objectLikeType)))};
+    if (hasNullChild) {
+      auto I = GetElementPtrInst::Create(
+          allocatedClasses[typeString(objectLikeType)], objectLike->codeGen(),
+          elementIndex);
+      Builder.Insert(I);
+      auto ret = assignVal->codeGen(objectLikeType);
+      Builder.CreateStore(ret, I);
+      return ret;
+    }
     auto I =
         GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
                                   objectLike->codeGen(), elementIndex);
     Builder.Insert(I);
-    auto ret = assignVal->codeGen(objectLikeType);
     Builder.CreateStore(ret, I);
-    return ret;
   }
-  auto I =
-      GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
-                                objectLike->codeGen(), elementIndex);
-  Builder.Insert(I);
-  auto ret = assignVal->codeGen();
-  Builder.CreateStore(ret, I);
   return ret;
 }
