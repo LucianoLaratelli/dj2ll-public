@@ -40,8 +40,22 @@
 
 using namespace llvm;
 extern std::string inputFile;
-std::map<std::string, llvm::StructType *> allocatedClasses;
-std::map<std::string, std::vector<llvm::Type *>> classSizes;
+
+static std::map<std::string, llvm::StructType *> allocatedClasses;
+static std::map<std::string, std::vector<llvm::Type *>> classSizes;
+static std::unique_ptr<llvm::Module> TheModule;
+
+llvm::Function *createFunc(llvm::IRBuilder<> &Builder, std::string Name) {
+  llvm::FunctionType *funcType =
+      llvm::FunctionType::get(Builder.getInt32Ty(), false);
+  llvm::Function *fooFunc = llvm::Function::Create(
+      funcType, llvm::Function::ExternalLinkage, Name, TheModule.get());
+  return fooFunc;
+}
+
+llvm::BasicBlock *createBB(llvm::Function *fooFunc, std::string Name) {
+  return llvm::BasicBlock::Create(TheContext, Name, fooFunc);
+}
 
 std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds() {
   std::map<std::string, std::vector<llvm::Type *>> ret;
@@ -76,18 +90,6 @@ std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds() {
     members.clear();
   }
   return ret;
-}
-
-static std::unique_ptr<Module> TheModule;
-Function *createFunc(IRBuilder<> &Builder, std::string Name) {
-  FunctionType *funcType = FunctionType::get(Builder.getInt32Ty(), false);
-  Function *fooFunc = Function::Create(funcType, Function::ExternalLinkage,
-                                       Name, TheModule.get());
-  return fooFunc;
-}
-
-BasicBlock *createBB(Function *fooFunc, std::string Name) {
-  return BasicBlock::Create(TheContext, Name, fooFunc);
 }
 
 Function *DJProgram::codeGen(int type) {

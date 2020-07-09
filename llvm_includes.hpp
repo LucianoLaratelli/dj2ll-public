@@ -1,6 +1,8 @@
 #ifndef __LLVM_INCLUDES_H_
 #define __LLVM_INCLUDES_H_
 
+// llvm library includes, globals involving LLVM classes
+
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
@@ -35,6 +37,7 @@ static llvm::LLVMContext TheContext;
 static llvm::IRBuilder<> Builder(TheContext);
 /*TheModule contains all functions and variables in the source program*/
 static std::map<std::string, llvm::AllocaInst *> NamedValues;
+static std::map<std::string, llvm::GlobalVariable *> GlobalValues;
 
 static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;
 
