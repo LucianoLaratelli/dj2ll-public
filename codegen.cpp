@@ -103,24 +103,9 @@ void emitITable() {
 
 Function *DJProgram::codeGen(int type) {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
-  // Create a new pass manager attached to it.
-  TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
-
-  // Promote allocas to registers.
-  TheFPM->add(createPromoteMemoryToRegisterPass());
-  // Do simple "peephole" optimizations and bit-twiddling optzns.
-  TheFPM->add(createInstructionCombiningPass());
-  // Reassociate expressions.
-  TheFPM->add(createReassociatePass());
-  // Eliminate Common SubExpressions.
-  TheFPM->add(createGVNPass());
-  // Simplify the control flow graph (deleting unreachable blocks, etc).
-  TheFPM->add(createCFGSimplificationPass());
-
-  TheFPM->doInitialization();
   Value *last = nullptr;
 
-  emitITable();
+  // emitITable();
   for (int i = 0; i < numClasses; i++) {
     allocatedClasses[classesST[i].className] =
         llvm::StructType::create(TheContext, classesST[i].className);
@@ -219,7 +204,22 @@ Function *DJProgram::codeGen(int type) {
     last = ConstantInt::get(TheContext, APInt(32, 0));
   }
   Builder.CreateRet(last); /*done with code gen*/
-  TheFPM->run(*DJmain);
+  if (runOptimizations) {
+    // Create a new pass manager attached to it.
+    TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
+    // Promote allocas to registers.
+    TheFPM->add(createPromoteMemoryToRegisterPass());
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    TheFPM->add(createInstructionCombiningPass());
+    // Reassociate expressions.
+    TheFPM->add(createReassociatePass());
+    // Eliminate Common SubExpressions.
+    TheFPM->add(createGVNPass());
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    TheFPM->add(createCFGSimplificationPass());
+    TheFPM->doInitialization();
+    TheFPM->run(*DJmain);
+  }
   llvm::Module *test = TheModule.get();
   llvm::verifyModule(*test, &llvm::errs());
   std::cout << "****************\n";
@@ -493,6 +493,8 @@ int getClassID(std::string name) {
 }
 
 Value *DJNew::codeGen(int type) {
+  /* allocate a DJ class using system malloc, setting the `this` pointer and the
+   * class ID */
   auto typeSize = ConstantExpr::getSizeOf(allocatedClasses[assignee]);
   typeSize =
       ConstantExpr::getTruncOrBitCast(typeSize, Type::getInt64Ty(TheContext));
@@ -500,12 +502,29 @@ Value *DJNew::codeGen(int type) {
   auto I = CallInst::CreateMalloc(
       Builder.GetInsertBlock(), Type::getInt64Ty(TheContext),
       allocatedClasses[assignee], typeSize, nullptr, nullptr, "");
-  return Builder.Insert(I);
-  // TODO: need to set the value of the `this` pointer to the value of malloc
-  // TODO: need to set the value of the class ID
-  // two GEPs: one for 0,0 and one for 0,1
-  // I guess new return value for DJNew::codeGen should be a GEP to the thing
-  // itself? just like GEP 0??
+  NamedValues["temp"] = Builder.CreateAlloca(
+      PointerType::getUnqual(allocatedClasses[assignee]), nullptr, "temp");
+  Builder.CreateStore(Builder.Insert(I), NamedValues["temp"]);
+
+  std::vector<Value *> elementIndex = {
+      ConstantInt::get(TheContext, APInt(32, 0)),
+      ConstantInt::get(TheContext, APInt(32, 0))};
+  // get pointer to zeroth element in the struct, which is the `this` pointer
+  auto thisPtr = GetElementPtrInst::Create(
+      allocatedClasses[assignee], Builder.CreateLoad(NamedValues["temp"]),
+      elementIndex);
+  // store the result of malloc as `this`
+  Builder.CreateStore(Builder.CreateLoad(NamedValues["temp"]),
+                      Builder.Insert(thisPtr));
+  // get pointer to the 1th element in the struct, which holds its class ID
+  elementIndex[1] = ConstantInt::get(TheContext, APInt(32, 1));
+  auto classID = GetElementPtrInst::Create(
+      allocatedClasses[assignee], Builder.CreateLoad(NamedValues["temp"]),
+      elementIndex);
+  Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, this->classID)),
+                      Builder.Insert(classID));
+
+  return I;
 }
 
 Value *DJDotId::codeGen(int type) {

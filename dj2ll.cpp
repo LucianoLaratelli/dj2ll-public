@@ -28,16 +28,25 @@ struct CInterface {
   VarDecl *mainBlockST;
 };
 
+bool findCLIOption(char **begin, char **end, const std::string &flag) {
+  return std::find(begin, end, flag) != end;
+}
+
 int main(int argc, char **argv) {
   bool codegen = true;
+  bool optimizations = false;
   if (argc < 2) {
     printf("Usage: %s filename\n", argv[0]);
     exit(-1);
-  } else if (argc == 3) {
-    if (std::string(argv[2]) == "--skip-codegen") {
+  } else if (argc > 2) {
+    if (findCLIOption(argv, argv + argc, "--skip-codegen")) {
       codegen = false;
+    } else if (findCLIOption(argv, argv + argc, "--run-optis")) {
+      optimizations = true;
     } else {
-      printf("I only know about the --skip-codegen flag.\n");
+      printf(
+          "I only know about these flags:\n%s--skip-codegen\n%s--run-optis\n",
+          FOURSPACES, FOURSPACES);
       exit(-1);
     }
   }
@@ -66,6 +75,7 @@ int main(int argc, char **argv) {
   LLProgram.print();
 
   if (codegen) {
+    LLProgram.runOptimizations = optimizations;
     LLProgram.codeGen();
   }
 }

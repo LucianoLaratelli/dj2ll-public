@@ -25,12 +25,14 @@ public:
 class DJProgram : public DJNode {
 public:
   bool hasInstanceOf;
+  bool runOptimizations;
   // ClassDeclList classes;
   // VarDeclList mainDecls;
   ExprList mainExprs;
   // DJProgram(ClassDeclList classes, VarDeclList mainDecls, ExprList mainExprs)
   //     : classes(classes), mainDecls(mainDecls), mainExprs(mainExprs) {}
-  DJProgram(ExprList mainExprs) : hasInstanceOf(false), mainExprs(mainExprs) {}
+  DJProgram(ExprList mainExprs)
+      : hasInstanceOf(false), runOptimizations(false), mainExprs(mainExprs) {}
   // the value of type is only ever utilized in DJNull::codeGen()
   llvm::Function *codeGen(int type = -1) override;
   void print();
@@ -211,7 +213,8 @@ public:
 class DJNew : public DJExpression {
 public:
   std::string assignee;
-  DJNew(char *assignee) : assignee(assignee) {}
+  int classID;
+  DJNew(char *assignee, int classID) : assignee(assignee), classID(classID) {}
   llvm::Value *codeGen(int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
