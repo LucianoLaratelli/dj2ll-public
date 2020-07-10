@@ -105,7 +105,7 @@ Function *DJProgram::codeGen(int type) {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
   Value *last = nullptr;
 
-  // emitITable();
+  emitITable();
   for (int i = 0; i < numClasses; i++) {
     allocatedClasses[classesST[i].className] =
         llvm::StructType::create(TheContext, classesST[i].className);
@@ -204,6 +204,12 @@ Function *DJProgram::codeGen(int type) {
     last = ConstantInt::get(TheContext, APInt(32, 0));
   }
   Builder.CreateRet(last); /*done with code gen*/
+
+  std::cout << "****************\n";
+  TheModule->print(outs(), nullptr);
+  std::cout << "****************\n";
+  llvm::Module *test = TheModule.get();
+  llvm::verifyModule(*test, &llvm::errs());
   if (runOptimizations) {
     // Create a new pass manager attached to it.
     TheFPM = std::make_unique<legacy::FunctionPassManager>(TheModule.get());
@@ -220,11 +226,6 @@ Function *DJProgram::codeGen(int type) {
     TheFPM->doInitialization();
     TheFPM->run(*DJmain);
   }
-  llvm::Module *test = TheModule.get();
-  llvm::verifyModule(*test, &llvm::errs());
-  std::cout << "****************\n";
-  TheModule->print(outs(), nullptr);
-  std::cout << "****************\n";
   /*begin emitting object file -- copied mostly verbatim from the kaleidoscope
    * tutorial*/
   auto TargetTriple = sys::getDefaultTargetTriple();
@@ -585,4 +586,19 @@ Value *DJDotAssign::codeGen(int type) {
     Builder.CreateStore(ret, I);
   }
   return ret;
+}
+
+Value *DJInstanceOf::codeGen(int type) {
+  Value *testee = objectLike->codeGen();
+  std::vector<Value *> elementIndex = {
+      ConstantInt::get(TheContext, APInt(32, 0)),
+      ConstantInt::get(TheContext, APInt(32, 1))};
+  auto I = GetElementPtrInst::Create(
+      allocatedClasses[typeString(objectLikeType)], testee, elementIndex);
+  Builder.Insert(I);
+  Builder.CreateLoad(I);
+  std::vector<Value *> ITableArgs = {
+      Builder.CreateLoad(I), ConstantInt::get(TheContext, APInt(32, classID))};
+  Function *TheFunction = TheModule->getFunction("ITable");
+  return Builder.CreateCall(TheFunction, ITableArgs);
 }

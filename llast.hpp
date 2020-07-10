@@ -248,6 +248,7 @@ public:
 };
 
 class DJInstanceOf : public DJExpression {
+public:
   DJExpression *objectLike;
   int objectLikeType;
   int classID;
