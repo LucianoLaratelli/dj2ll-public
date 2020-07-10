@@ -46,18 +46,19 @@ int getIndexOfRegularField(std::string desired, int classIndex) {
 // class memory is laid out like so for a class that declares N fields and
 // inherits M fields:
 //
-// 0            , 1            , 2  , ... , N            , N + 1, ... , N + M
-// this pointer , 1th declared , 2nd, ... , Nth declared, 1th inherited,
+// 0,1,2,...,N,N+1,...,N+M
+// this pointer,class number , 1th declared , 2nd, ... , Nth declared, 1th
+// inherited,
 
 int getIndexOfRegularOrInheritedField(std::string ID, int classNum) {
   // given an ID and a class from which to start, return the index of a field in
-  // that class, offset by 1 for the this pointer and by the number of variables
-  // before it in the inheritance graph
+  // that class, offset by 1 for the this pointer, by another 1 for the class
+  // ID, and by the number of variables before it in the inheritance graph
   int count = 0;
   int ind = 0;
   while (count < numClasses && classNum != 0) {
     if (isVarRegularInClass(ID, classNum)) {
-      return ind + getIndexOfRegularField(ID, classNum) + 1;
+      return ind + getIndexOfRegularField(ID, classNum) + 1 + 1;
     }
     ind += classesST[classNum].numVars;
     classNum = classesST[classNum].superclass;
@@ -107,8 +108,11 @@ std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds(
   std::map<std::string, std::vector<llvm::Type *>> ret;
   std::vector<llvm::Type *> members;
   for (int i = 0; i < numClasses; i++) {
+    /*allocate `this` pointer*/
     members.push_back(
         PointerType::getUnqual(allocatedClasses[classesST[i].className]));
+    /*make space for class ID*/
+    members.push_back(Type::getInt32Ty(TheContext));
     for (int j = 0; j < classesST[i].numVars; j++) {
       switch (classesST[i].varList[j].type) {
       case BAD_TYPE:

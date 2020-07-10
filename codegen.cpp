@@ -60,6 +60,10 @@ llvm::BasicBlock *createBB(llvm::Function *fooFunc, std::string Name) {
 void emitITable() {
   // generate the instance-of jump table for all the classes in the program
   // basically a mess of chained if-then-else statements of this form:
+  // {{let a = the first argument to ITable and b = the second argument}}
+  // if(a == 0 and b == 0) return isSubtype(0,0)
+  // if(a == 0 and b == 1) return isSubtype(0,1)
+  // etc
   std::vector<Type *> ITableArgs = {Type::getInt32Ty(TheContext),
                                     Type::getInt32Ty(TheContext)};
   llvm::FunctionType *ITableType =
@@ -479,6 +483,15 @@ Value *DJNull::codeGen(int type) {
       PointerType::getUnqual(allocatedClasses[typeString(type)]));
 }
 
+int getClassID(std::string name) {
+  for (int i = 0; i < numClasses; i++) {
+    if (classesST[i].className == name) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 Value *DJNew::codeGen(int type) {
   auto typeSize = ConstantExpr::getSizeOf(allocatedClasses[assignee]);
   typeSize =
@@ -489,6 +502,10 @@ Value *DJNew::codeGen(int type) {
       allocatedClasses[assignee], typeSize, nullptr, nullptr, "");
   return Builder.Insert(I);
   // TODO: need to set the value of the `this` pointer to the value of malloc
+  // TODO: need to set the value of the class ID
+  // two GEPs: one for 0,0 and one for 0,1
+  // I guess new return value for DJNew::codeGen should be a GEP to the thing
+  // itself? just like GEP 0??
 }
 
 Value *DJDotId::codeGen(int type) {
