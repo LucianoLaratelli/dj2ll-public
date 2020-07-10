@@ -596,7 +596,6 @@ Value *DJInstanceOf::codeGen(int type) {
   auto I = GetElementPtrInst::Create(
       allocatedClasses[typeString(objectLikeType)], testee, elementIndex);
   Builder.Insert(I);
-  Builder.CreateLoad(I);
   std::vector<Value *> ITableArgs = {
       Builder.CreateLoad(I), ConstantInt::get(TheContext, APInt(32, classID))};
   Function *TheFunction = TheModule->getFunction("ITable");
