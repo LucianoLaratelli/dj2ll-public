@@ -24,12 +24,13 @@ public:
 
 class DJProgram : public DJNode {
 public:
+  bool hasInstanceOf;
   // ClassDeclList classes;
   // VarDeclList mainDecls;
   ExprList mainExprs;
   // DJProgram(ClassDeclList classes, VarDeclList mainDecls, ExprList mainExprs)
   //     : classes(classes), mainDecls(mainDecls), mainExprs(mainExprs) {}
-  DJProgram(ExprList mainExprs) : mainExprs(mainExprs) {}
+  DJProgram(ExprList mainExprs) : hasInstanceOf(false), mainExprs(mainExprs) {}
   // the value of type is only ever utilized in DJNull::codeGen()
   llvm::Function *codeGen(int type = -1) override;
   void print();
@@ -238,6 +239,18 @@ public:
               DJExpression *assignVal)
       : objectLike(objectLike), objectLikeType(objectLikeType), ID(ID),
         assignVal(assignVal){};
+  llvm::Value *codeGen(int type = -1) override;
+  void print(int offset = 0) override;
+  std::string className() override;
+};
+
+class DJInstanceOf : public DJExpression {
+  DJExpression *objectLike;
+  int objectLikeType;
+  int classID;
+  DJInstanceOf(DJExpression *objectLike, int objectLikeType, int classID)
+      : objectLike(objectLike), objectLikeType(objectLikeType),
+        classID(classID){};
   llvm::Value *codeGen(int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
