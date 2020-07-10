@@ -57,6 +57,46 @@ llvm::BasicBlock *createBB(llvm::Function *fooFunc, std::string Name) {
   return llvm::BasicBlock::Create(TheContext, Name, fooFunc);
 }
 
+void emitITable() {
+  // generate the instance-of jump table for all the classes in the program
+  // basically a mess of chained if-then-else statements of this form:
+  std::vector<Type *> ITableArgs = {Type::getInt32Ty(TheContext),
+                                    Type::getInt32Ty(TheContext)};
+  llvm::FunctionType *ITableType =
+      llvm::FunctionType::get(Builder.getInt1Ty(), ITableArgs, false);
+  llvm::Function *ITableFunc = llvm::Function::Create(
+      ITableType, llvm::Function::ExternalLinkage, "ITable", TheModule.get());
+  Builder.SetInsertPoint(createBB(ITableFunc, "entry"));
+  auto aClass = ITableFunc->getArg(0);
+  auto bClass = ITableFunc->getArg(1);
+
+  for (int i = 0; i < numClasses; i++) {
+    for (int j = 0; j < numClasses; j++) {
+      auto condValue = Builder.CreateAnd(
+          Builder.CreateICmpEQ(aClass,
+                               ConstantInt::get(TheContext, APInt(32, i))),
+          Builder.CreateICmpEQ(bClass,
+                               ConstantInt::get(TheContext, APInt(32, j))));
+      Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+      BasicBlock *ThenBB = BasicBlock::Create(TheContext, "then", TheFunction);
+      BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+
+      Builder.CreateCondBr(condValue, ThenBB, ElseBB);
+      // emit then value
+      Builder.SetInsertPoint(ThenBB);
+
+      Builder.CreateRet(
+          ConstantInt::get(TheContext, APInt(1, isSubtype(i, j))));
+
+      ThenBB = Builder.GetInsertBlock();
+      TheFunction->getBasicBlockList().push_back(ElseBB);
+      Builder.SetInsertPoint(ElseBB);
+    }
+  }
+  Builder.CreateRet(ConstantInt::get(TheContext, APInt(1, 0)));
+}
+
 Function *DJProgram::codeGen(int type) {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
   // Create a new pass manager attached to it.
@@ -76,6 +116,7 @@ Function *DJProgram::codeGen(int type) {
   TheFPM->doInitialization();
   Value *last = nullptr;
 
+  emitITable();
   for (int i = 0; i < numClasses; i++) {
     allocatedClasses[classesST[i].className] =
         llvm::StructType::create(TheContext, classesST[i].className);
@@ -174,7 +215,7 @@ Function *DJProgram::codeGen(int type) {
     last = ConstantInt::get(TheContext, APInt(32, 0));
   }
   Builder.CreateRet(last); /*done with code gen*/
-  // TheFPM->run(*DJmain);
+  TheFPM->run(*DJmain);
   llvm::Module *test = TheModule.get();
   llvm::verifyModule(*test, &llvm::errs());
   std::cout << "****************\n";
@@ -447,6 +488,7 @@ Value *DJNew::codeGen(int type) {
       Builder.GetInsertBlock(), Type::getInt64Ty(TheContext),
       allocatedClasses[assignee], typeSize, nullptr, nullptr, "");
   return Builder.Insert(I);
+  // TODO: need to set the value of the `this` pointer to the value of malloc
 }
 
 Value *DJDotId::codeGen(int type) {
