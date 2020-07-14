@@ -28,12 +28,13 @@ bool findCLIOption(char **begin, char **end, const std::string &flag) {
   return std::find(begin, end, flag) != end;
 }
 
-void runClang(){
-    std::string command = "clang " + inputFile + ".o";
-    std::system(command.c_str());
+void runClang() {
+  std::string command = "clang " + inputFile + ".o";
+  std::system(command.c_str());
 }
 
-void dj2ll(std::map<std::string, bool> compilerFlags, std::string fileName, char ** argv){
+void dj2ll(std::map<std::string, bool> compilerFlags, std::string fileName,
+           char **argv) {
   std::string extension = fileName.substr(fileName.size() - 3, fileName.size());
   inputFile = fileName.substr(0, fileName.size() - 3);
   if (extension != ".dj") {
@@ -43,7 +44,7 @@ void dj2ll(std::map<std::string, bool> compilerFlags, std::string fileName, char
 
   yyin = fopen(fileName.c_str(), "r");
   if (yyin == NULL) {
-    printf("ERROR: could not open file %s\n", argv[1]);
+    printf("ERROR: could not open file %s\n", fileName.c_str());
     exit(-1);
   }
   yyparse();
@@ -63,6 +64,5 @@ void dj2ll(std::map<std::string, bool> compilerFlags, std::string fileName, char
   }
   runClang();
 }
-
 
 #endif // __DJ2LL_H_
