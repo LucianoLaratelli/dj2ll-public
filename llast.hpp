@@ -19,7 +19,9 @@ typedef std::vector<DJExpression *> ExprList;
 class DJNode {
 public:
   virtual ~DJNode() {}
-  virtual llvm::Value *codeGen(int type = -1) = 0;
+  virtual llvm::Value *
+  codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+          int type = -1) = 0;
 };
 
 class DJProgram : public DJNode {
@@ -34,7 +36,8 @@ public:
   DJProgram(ExprList mainExprs)
       : hasInstanceOf(false), runOptimizations(false), mainExprs(mainExprs) {}
   // the value of type is only ever utilized in DJNull::codeGen()
-  llvm::Function *codeGen(int type = -1) override;
+  llvm::Function *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                          int type = -1) override;
   void print();
 };
 
@@ -53,7 +56,8 @@ class DJNat : public DJExpression {
 public:
   unsigned int value;
   DJNat(unsigned int value) : value(value) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -62,7 +66,8 @@ class DJFalse : public DJExpression {
 public:
   // unsigned int value;
   // DJFalse(unsigned int value) : value(value) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -71,7 +76,8 @@ class DJTrue : public DJExpression {
 public:
   // unsigned int value;
   // DJTrue(unsigned int value) : value(value) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -80,7 +86,8 @@ class DJPlus : public DJExpression {
 public:
   DJExpression *lhs, *rhs;
   DJPlus(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -89,7 +96,8 @@ class DJMinus : public DJExpression {
 public:
   DJExpression *lhs, *rhs;
   DJMinus(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -98,7 +106,8 @@ class DJTimes : public DJExpression {
 public:
   DJExpression *lhs, *rhs;
   DJTimes(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -107,14 +116,16 @@ class DJPrint : public DJExpression {
 public:
   DJExpression *printee;
   DJPrint(DJExpression *printee) : printee(printee) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
 
 class DJRead : public DJExpression {
 public:
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -123,7 +134,8 @@ class DJNot : public DJExpression {
 public:
   DJExpression *negated;
   DJNot(DJExpression *negated) : negated(negated) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -136,7 +148,8 @@ public:
   bool rightNull;
   int nonNullType;
   DJEqual(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -145,7 +158,8 @@ class DJGreater : public DJExpression {
 public:
   DJExpression *lhs, *rhs;
   DJGreater(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -154,7 +168,8 @@ class DJAnd : public DJExpression {
 public:
   DJExpression *lhs, *rhs;
   DJAnd(DJExpression *lhs, DJExpression *rhs) : lhs(lhs), rhs(rhs) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -165,7 +180,8 @@ public:
   ExprList thenBlock, elseBlock;
   DJIf(DJExpression *cond, ExprList thenBlock, ExprList elseBlock)
       : cond(cond), thenBlock(thenBlock), elseBlock(elseBlock) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -177,7 +193,8 @@ public:
   DJFor(DJExpression *init, DJExpression *test, DJExpression *update,
         ExprList body)
       : init(init), test(test), update(update), body(body) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -186,7 +203,8 @@ class DJId : public DJExpression {
 public:
   std::string ID;
   DJId(char *ID) : ID(ID){};
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -198,14 +216,16 @@ public:
   DJExpression *RHS;
   DJAssign(char *LHS, int LHSType, DJExpression *RHS)
       : LHS(LHS), LHSType(LHSType), RHS(RHS) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
 
 class DJNull : public DJExpression {
 public:
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -215,7 +235,8 @@ public:
   std::string assignee;
   int classID;
   DJNew(char *assignee, int classID) : assignee(assignee), classID(classID) {}
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -227,7 +248,8 @@ public:
   std::string ID;
   DJDotId(DJExpression *objectLike, int objectLikeType, char *ID)
       : objectLike(objectLike), objectLikeType(objectLikeType), ID(ID){};
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -242,7 +264,8 @@ public:
               DJExpression *assignVal)
       : objectLike(objectLike), objectLikeType(objectLikeType), ID(ID),
         assignVal(assignVal){};
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };
@@ -255,7 +278,8 @@ public:
   DJInstanceOf(DJExpression *objectLike, int objectLikeType, int classID)
       : objectLike(objectLike), objectLikeType(objectLikeType),
         classID(classID){};
-  llvm::Value *codeGen(int type = -1) override;
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
 };

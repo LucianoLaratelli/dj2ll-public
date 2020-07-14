@@ -36,7 +36,9 @@ static llvm::LLVMContext TheContext;
  * instructions*/
 static llvm::IRBuilder<> Builder(TheContext);
 /*TheModule contains all functions and variables in the source program*/
-static std::map<std::string, llvm::AllocaInst *> NamedValues;
+typedef std::map<std::string, llvm::AllocaInst *> symbolTable;
+static std::map<std::string, symbolTable> NamedValues;
+
 static std::map<std::string, llvm::GlobalVariable *> GlobalValues;
 
 static std::unique_ptr<llvm::legacy::FunctionPassManager> TheFPM;

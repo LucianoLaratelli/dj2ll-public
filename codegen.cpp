@@ -101,7 +101,7 @@ void emitITable() {
   Builder.CreateRet(ConstantInt::get(TheContext, APInt(1, 0)));
 }
 
-Function *DJProgram::codeGen(int type) {
+Function *DJProgram::codeGen(symbolTable ST, int type) {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
   Value *last = nullptr;
 
@@ -170,33 +170,36 @@ Function *DJProgram::codeGen(int type) {
   /*begin codegen for `main`*/
   Function *DJmain = createFunc(Builder, "main");
   BasicBlock *entry = createBB(DJmain, "entry");
+
+  std::map<std::string, llvm::AllocaInst *> MainSymbolTable;
   Builder.SetInsertPoint(entry);
   for (int i = 0; i < numMainBlockLocals; i++) {
     char *varName = mainBlockST[i].varName;
     switch (mainBlockST[i].type) {
     case TYPE_NAT:
-      NamedValues[varName] =
+      MainSymbolTable[varName] =
           Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, varName);
       Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, 0)),
-                          NamedValues[varName]);
+                          MainSymbolTable[varName]);
       break;
     case TYPE_BOOL:
-      NamedValues[varName] =
+      MainSymbolTable[varName] =
           Builder.CreateAlloca(Type::getInt1Ty(TheContext), nullptr, varName);
       Builder.CreateStore(ConstantInt::get(TheContext, APInt(1, 0)),
-                          NamedValues[varName]);
+                          MainSymbolTable[varName]);
       break;
     default:
       char *varType = typeString(mainBlockST[i].type);
-      NamedValues[varName] = Builder.CreateAlloca(
+      MainSymbolTable[varName] = Builder.CreateAlloca(
           PointerType::getUnqual(allocatedClasses[varType]),
           // PointerType::get(allocatedClasses[varType],0),
-          NamedValues[varName]);
+          MainSymbolTable[varName]);
       break;
     }
   }
+  NamedValues["main"] = MainSymbolTable;
   for (auto e : mainExprs) {
-    last = e->codeGen();
+    last = e->codeGen(NamedValues["main"]);
   }
   // adjust main's return type if needed so we don't get a type mismatch when
   // we verify the module
@@ -285,20 +288,20 @@ Function *DJProgram::codeGen(int type) {
   return DJmain;
 }
 
-Value *DJPlus::codeGen(int type) {
-  return Builder.CreateAdd(lhs->codeGen(), rhs->codeGen(), "addtmp");
+Value *DJPlus::codeGen(symbolTable ST, int type) {
+  return Builder.CreateAdd(lhs->codeGen(ST), rhs->codeGen(ST), "addtmp");
 }
 
-Value *DJMinus::codeGen(int type) {
-  return Builder.CreateSub(lhs->codeGen(), rhs->codeGen(), "subtmp");
+Value *DJMinus::codeGen(symbolTable ST, int type) {
+  return Builder.CreateSub(lhs->codeGen(ST), rhs->codeGen(ST), "subtmp");
 }
 
-Value *DJTimes::codeGen(int type) {
-  return Builder.CreateMul(lhs->codeGen(), rhs->codeGen(), "multmp");
+Value *DJTimes::codeGen(symbolTable ST, int type) {
+  return Builder.CreateMul(lhs->codeGen(ST), rhs->codeGen(ST), "multmp");
 }
 
-Value *DJPrint::codeGen(int type) {
-  Value *P = printee->codeGen();
+Value *DJPrint::codeGen(symbolTable ST, int type) {
+  Value *P = printee->codeGen(ST);
   Value *formatStr = Builder.CreateGlobalStringPtr("%u\n");
   std::vector<Value *> PrintfArgs = {formatStr, P};
   Function *TheFunction = TheModule->getFunction("printf");
@@ -306,7 +309,7 @@ Value *DJPrint::codeGen(int type) {
   return P;
 }
 
-Value *DJRead::codeGen(int type) {
+Value *DJRead::codeGen(symbolTable ST, int type) {
   Builder.GetInsertBlock()->getParent();
   Value *requestStr = Builder.CreateGlobalStringPtr("Enter a natural number: ");
   std::vector<Value *> requestArgs = {requestStr};
@@ -320,44 +323,45 @@ Value *DJRead::codeGen(int type) {
   return Builder.CreateLoad(Alloca);
 }
 
-Value *DJNat::codeGen(int type) {
+Value *DJNat::codeGen(symbolTable ST, int type) {
   return ConstantInt::get(TheContext, APInt(32, value));
 }
 
-Value *DJNot::codeGen(int type) {
-  return Builder.CreateNot(negated->codeGen());
+Value *DJNot::codeGen(symbolTable ST, int type) {
+  return Builder.CreateNot(negated->codeGen(ST));
 }
 
-Value *DJEqual::codeGen(int type) {
+Value *DJEqual::codeGen(symbolTable ST, int type) {
   if (bothNull || !hasNullChild) {
-    return Builder.CreateICmpEQ(lhs->codeGen(), rhs->codeGen());
+    return Builder.CreateICmpEQ(lhs->codeGen(ST), rhs->codeGen(ST));
   }
   if (leftNull) {
-    return Builder.CreateICmpEQ(lhs->codeGen(nonNullType), rhs->codeGen());
+    return Builder.CreateICmpEQ(lhs->codeGen(ST, nonNullType),
+                                rhs->codeGen(ST));
   }
   // right must be null, then
-  return Builder.CreateICmpEQ(lhs->codeGen(), rhs->codeGen(nonNullType));
+  return Builder.CreateICmpEQ(lhs->codeGen(ST), rhs->codeGen(ST, nonNullType));
 }
 
-Value *DJGreater::codeGen(int type) {
-  return Builder.CreateICmpUGT(lhs->codeGen(), rhs->codeGen());
+Value *DJGreater::codeGen(symbolTable ST, int type) {
+  return Builder.CreateICmpUGT(lhs->codeGen(ST), rhs->codeGen(ST));
 }
 
-Value *DJAnd::codeGen(int type) {
-  return Builder.CreateAnd(lhs->codeGen(), rhs->codeGen());
+Value *DJAnd::codeGen(symbolTable ST, int type) {
+  return Builder.CreateAnd(lhs->codeGen(ST), rhs->codeGen(ST));
 }
 
-Value *DJTrue::codeGen(int type) {
+Value *DJTrue::codeGen(symbolTable ST, int type) {
   return ConstantInt::get(TheContext, APInt(1, 1));
 }
 
-Value *DJFalse::codeGen(int type) {
+Value *DJFalse::codeGen(symbolTable ST, int type) {
   return ConstantInt::get(TheContext, APInt(1, 0));
 }
 
-Value *DJIf::codeGen(int type) {
+Value *DJIf::codeGen(symbolTable ST, int type) {
   /*almost verbatim from LLVM kaleidescope tutorial; comments are not mine*/
-  Value *condValue = cond->codeGen();
+  Value *condValue = cond->codeGen(ST);
   condValue = Builder.CreateICmpNE(condValue,
                                    ConstantInt::get(TheContext, APInt(1, 0)));
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
@@ -374,7 +378,7 @@ Value *DJIf::codeGen(int type) {
 
   Value *ThenV = nullptr;
   for (auto &e : thenBlock) {
-    ThenV = e->codeGen();
+    ThenV = e->codeGen(ST);
   }
 
   Builder.CreateBr(MergeBB);
@@ -387,7 +391,7 @@ Value *DJIf::codeGen(int type) {
 
   Value *ElseV = nullptr;
   for (auto &e : elseBlock) {
-    ElseV = e->codeGen();
+    ElseV = e->codeGen(ST);
   }
 
   Builder.CreateBr(MergeBB);
@@ -404,11 +408,11 @@ Value *DJIf::codeGen(int type) {
   return PN;
 }
 
-Value *DJFor::codeGen(int type) {
+Value *DJFor::codeGen(symbolTable ST, int type) {
   /*pretty similar to kaleidescope example; some modification to actually work
    * like a for loop should, unlike the one in the tutorial*/
 
-  init->codeGen();
+  init->codeGen(ST);
 
   // Make the new basic block for the loop header, inserting after current
   // block.
@@ -423,7 +427,7 @@ Value *DJFor::codeGen(int type) {
   Builder.SetInsertPoint(LoopBB);
 
   //    Compute the end condition.
-  Value *testVal = test->codeGen();
+  Value *testVal = test->codeGen(ST);
 
   BasicBlock *BodyBB = BasicBlock::Create(TheContext, "loopbody", TheFunction);
   BasicBlock *AfterBB =
@@ -440,11 +444,11 @@ Value *DJFor::codeGen(int type) {
   // current BB.  Note that we ignore the value computed by the body
   Builder.SetInsertPoint(BodyBB);
   for (auto &e : body) {
-    e->codeGen();
+    e->codeGen(ST);
   }
 
-  update->codeGen();
-  testVal = test->codeGen();
+  update->codeGen(ST);
+  testVal = test->codeGen(ST);
   // Convert condition to a bool by comparing non-equal to 0.0.
   testVal = Builder.CreateICmpNE(
       testVal, ConstantInt::get(TheContext, APInt(1, 0)), "loopcond");
@@ -462,18 +466,18 @@ Value *DJFor::codeGen(int type) {
   return Constant::getNullValue(Type::getInt32Ty(TheContext));
 }
 
-Value *DJId::codeGen(int type) {
-  return Builder.CreateLoad(NamedValues[ID], ID);
+Value *DJId::codeGen(symbolTable ST, int type) {
+  return Builder.CreateLoad(ST[ID], ID);
 }
 
-Value *DJAssign::codeGen(int type) {
+Value *DJAssign::codeGen(symbolTable ST, int type) {
   if (hasNullChild) {
-    return Builder.CreateStore(RHS->codeGen(LHSType), NamedValues[LHS]);
+    return Builder.CreateStore(RHS->codeGen(ST, LHSType), ST[LHS]);
   }
-  return Builder.CreateStore(RHS->codeGen(), NamedValues[LHS]);
+  return Builder.CreateStore(RHS->codeGen(ST), ST[LHS]);
 }
 
-Value *DJNull::codeGen(int type) {
+Value *DJNull::codeGen(symbolTable ST, int type) {
   if (type == -1) {
     // case where null is not compared or assigned to a variable of object
     // type, we can simply return a null int. this also covers the case where
@@ -493,7 +497,7 @@ int getClassID(std::string name) {
   return -1;
 }
 
-Value *DJNew::codeGen(int type) {
+Value *DJNew::codeGen(symbolTable ST, int type) {
   /* allocate a DJ class using system malloc, setting the `this` pointer and the
    * class ID */
   auto typeSize = ConstantExpr::getSizeOf(allocatedClasses[assignee]);
@@ -503,32 +507,29 @@ Value *DJNew::codeGen(int type) {
   auto I = CallInst::CreateMalloc(
       Builder.GetInsertBlock(), Type::getInt64Ty(TheContext),
       allocatedClasses[assignee], typeSize, nullptr, nullptr, "");
-  NamedValues["temp"] = Builder.CreateAlloca(
+  ST["temp"] = Builder.CreateAlloca(
       PointerType::getUnqual(allocatedClasses[assignee]), nullptr, "temp");
-  Builder.CreateStore(Builder.Insert(I), NamedValues["temp"]);
+  Builder.CreateStore(Builder.Insert(I), ST["temp"]);
 
   std::vector<Value *> elementIndex = {
       ConstantInt::get(TheContext, APInt(32, 0)),
       ConstantInt::get(TheContext, APInt(32, 0))};
   // get pointer to zeroth element in the struct, which is the `this` pointer
   auto thisPtr = GetElementPtrInst::Create(
-      allocatedClasses[assignee], Builder.CreateLoad(NamedValues["temp"]),
-      elementIndex);
+      allocatedClasses[assignee], Builder.CreateLoad(ST["temp"]), elementIndex);
   // store the result of malloc as `this`
-  Builder.CreateStore(Builder.CreateLoad(NamedValues["temp"]),
-                      Builder.Insert(thisPtr));
+  Builder.CreateStore(Builder.CreateLoad(ST["temp"]), Builder.Insert(thisPtr));
   // get pointer to the 1th element in the struct, which holds its class ID
   elementIndex[1] = ConstantInt::get(TheContext, APInt(32, 1));
   auto classID = GetElementPtrInst::Create(
-      allocatedClasses[assignee], Builder.CreateLoad(NamedValues["temp"]),
-      elementIndex);
+      allocatedClasses[assignee], Builder.CreateLoad(ST["temp"]), elementIndex);
   Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, this->classID)),
                       Builder.Insert(classID));
 
   return I;
 }
 
-Value *DJDotId::codeGen(int type) {
+Value *DJDotId::codeGen(symbolTable ST, int type) {
   auto varInfo = varIsStaticInAnySuperClass(ID, objectLikeType);
   if (varInfo.first) {
     // because of subtyping, the program may be talking about A.b (where A
@@ -547,15 +548,15 @@ Value *DJDotId::codeGen(int type) {
             APInt(32, getIndexOfRegularOrInheritedField(ID, objectLikeType)))};
     auto I =
         GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
-                                  objectLike->codeGen(), elementIndex);
+                                  objectLike->codeGen(ST), elementIndex);
     Builder.Insert(I);
     return Builder.CreateLoad(I);
   }
 }
 
-Value *DJDotAssign::codeGen(int type) {
+Value *DJDotAssign::codeGen(symbolTable ST, int type) {
   auto varInfo = varIsStaticInAnySuperClass(ID, objectLikeType);
-  auto ret = assignVal->codeGen();
+  auto ret = assignVal->codeGen(ST);
   if (varInfo.first) {
     // because of subtyping, the program may be talking about A.b (where A
     // extends B) and b is actually a static field of class B. varIsStatic...
@@ -572,32 +573,32 @@ Value *DJDotAssign::codeGen(int type) {
             APInt(32, getIndexOfRegularOrInheritedField(ID, objectLikeType)))};
     if (hasNullChild) {
       auto I = GetElementPtrInst::Create(
-          allocatedClasses[typeString(objectLikeType)], objectLike->codeGen(),
+          allocatedClasses[typeString(objectLikeType)], objectLike->codeGen(ST),
           elementIndex);
       Builder.Insert(I);
-      auto ret = assignVal->codeGen(objectLikeType);
+      auto ret = assignVal->codeGen(ST, objectLikeType);
       Builder.CreateStore(ret, I);
       return ret;
     }
     auto I =
         GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
-                                  objectLike->codeGen(), elementIndex);
+                                  objectLike->codeGen(ST), elementIndex);
     Builder.Insert(I);
     Builder.CreateStore(ret, I);
   }
   return ret;
 }
 
-Value *DJInstanceOf::codeGen(int type) {
-  Value *testee = objectLike->codeGen();
+Value *DJInstanceOf::codeGen(symbolTable ST, int type) {
+  Value *testee = objectLike->codeGen(ST);
   std::vector<Value *> elementIndex = {
       ConstantInt::get(TheContext, APInt(32, 0)),
       ConstantInt::get(TheContext, APInt(32, 1))};
   auto I = GetElementPtrInst::Create(
       allocatedClasses[typeString(objectLikeType)], testee, elementIndex);
-  Builder.Insert(I);
   std::vector<Value *> ITableArgs = {
-      Builder.CreateLoad(I), ConstantInt::get(TheContext, APInt(32, classID))};
+      Builder.CreateLoad(Builder.Insert(I)),
+      ConstantInt::get(TheContext, APInt(32, classID))};
   Function *TheFunction = TheModule->getFunction("ITable");
   return Builder.CreateCall(TheFunction, ITableArgs);
 }
