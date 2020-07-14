@@ -45,6 +45,84 @@ static std::map<std::string, llvm::StructType *> allocatedClasses;
 static std::map<std::string, std::vector<llvm::Type *>> classSizes;
 static std::unique_ptr<llvm::Module> TheModule;
 
+std::vector<Type *> calculateInheritedStorageNeeds(
+    int classNum, std::map<std::string, llvm::StructType *> &allocatedClasses) {
+  // given a class ID, iterate inclusively from that class through all its
+  // superclasses, adding LLVM types to its declaration
+  int count = 0;
+  std::vector<Type *> members;
+  while (count < numClasses && classNum != 0 && classNum != -4) {
+    for (int j = 0; j < classesST[classNum].numVars; j++) {
+      switch (classesST[classNum].varList[j].type) {
+      case BAD_TYPE:
+      case NO_OBJECT:
+      case ANY_OBJECT:
+        std::cerr
+            << "bad regular var encountered in calculateClassStorageNeeds\n";
+        exit(-1);
+      case TYPE_BOOL: {
+        members.push_back(Type::getInt1Ty(TheContext));
+        break;
+      }
+      case TYPE_NAT: {
+        members.push_back(Type::getInt32Ty(TheContext));
+        break;
+      }
+      default: { // all objects
+        members.push_back(PointerType::getUnqual(
+            allocatedClasses[typeString(classesST[classNum].varList[j].type)]));
+        break;
+      }
+      }
+    }
+    classNum = classesST[classNum].superclass;
+  }
+  return members;
+}
+
+std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds(
+    std::map<std::string, llvm::StructType *> &allocatedClasses) {
+  // determine the storage needs of every class declared by the program
+  std::map<std::string, std::vector<llvm::Type *>> ret;
+  std::vector<llvm::Type *> members;
+  for (int i = 0; i < numClasses; i++) {
+    /*allocate `this` pointer*/
+    members.push_back(
+        PointerType::getUnqual(allocatedClasses[classesST[i].className]));
+    /*make space for class ID*/
+    members.push_back(Type::getInt32Ty(TheContext));
+    for (int j = 0; j < classesST[i].numVars; j++) {
+      switch (classesST[i].varList[j].type) {
+      case BAD_TYPE:
+      case NO_OBJECT:
+      case ANY_OBJECT:
+        std::cerr
+            << "bad regular var encountered in calculateClassStorageNeeds\n";
+        exit(-1);
+      case TYPE_BOOL: {
+        members.push_back(Type::getInt1Ty(TheContext));
+        break;
+      }
+      case TYPE_NAT: {
+        members.push_back(Type::getInt32Ty(TheContext));
+        break;
+      }
+      default: { // all objects
+        members.push_back(PointerType::getUnqual(
+            allocatedClasses[typeString(classesST[i].varList[j].type)]));
+        break;
+      }
+      }
+    }
+    auto inherited = calculateInheritedStorageNeeds(classesST[i].superclass,
+                                                    allocatedClasses);
+    members.insert(members.end(), inherited.begin(), inherited.end());
+    ret[classesST[i].className] = members;
+    members.clear();
+  }
+  return ret;
+}
+
 llvm::Function *createFunc(llvm::IRBuilder<> &Builder, std::string Name) {
   llvm::FunctionType *funcType =
       llvm::FunctionType::get(Builder.getInt32Ty(), false);
@@ -472,9 +550,13 @@ Value *DJId::codeGen(symbolTable ST, int type) {
 
 Value *DJAssign::codeGen(symbolTable ST, int type) {
   if (hasNullChild) {
-    return Builder.CreateStore(RHS->codeGen(ST, LHSType), ST[LHS]);
+    auto V = RHS->codeGen(ST, LHSType);
+    Builder.CreateStore(V, ST[LHS]);
+    return V;
   }
-  return Builder.CreateStore(RHS->codeGen(ST), ST[LHS]);
+  auto V = RHS->codeGen(ST);
+  Builder.CreateStore(V, ST[LHS]);
+  return V;
 }
 
 Value *DJNull::codeGen(symbolTable ST, int type) {
