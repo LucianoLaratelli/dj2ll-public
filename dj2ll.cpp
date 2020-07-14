@@ -4,45 +4,22 @@
 #include <iostream>
 #include <string>
 
-#include "llast.hpp"
-#include "llvm_includes.hpp"
-#include "translateAST.hpp"
-#include "util.h"
-
-ASTree *wholeProgram;
-ASTree *mainExprs;
-int numMainBlockLocals;
-VarDecl *mainBlockST;
-int numClasses;
-ClassDecl *classesST;
-std::string inputFile;
-
-extern FILE *yyin;
-extern FILE *yyout;
-extern "C" int yyparse(void);
-extern ASTree *pgmAST;
-
-struct CInterface {
-  ClassDecl *classesST;
-  int numclasses;
-  VarDecl *mainBlockST;
-};
-
-bool findCLIOption(char **begin, char **end, const std::string &flag) {
-  return std::find(begin, end, flag) != end;
-}
+#include "dj2ll.hpp"
 
 int main(int argc, char **argv) {
-  bool codegen = true;
-  bool optimizations = false;
+  std::map<std::string, bool> compilerFlags;
+  compilerFlags["codegen"] = true;
+  compilerFlags["optimizations"] = false;
   if (argc < 2) {
-    printf("Usage: %s filename\n", argv[0]);
+    printf("Usage: %s [flags] filename\n", argv[0]);
+    printf("I also know about these flags:\n%s--skip-codegen\n%s--run-optis\n",
+           FOURSPACES, FOURSPACES);
     exit(-1);
   } else if (argc > 2) {
     if (findCLIOption(argv, argv + argc, "--skip-codegen")) {
-      codegen = false;
+      compilerFlags["codegen"] = false;
     } else if (findCLIOption(argv, argv + argc, "--run-optis")) {
-      optimizations = true;
+      compilerFlags["optimizations"] = true;
     } else {
       printf(
           "I only know about these flags:\n%s--skip-codegen\n%s--run-optis\n",
@@ -50,32 +27,6 @@ int main(int argc, char **argv) {
       exit(-1);
     }
   }
-  std::string fileName = argv[1];
-  std::string extension = fileName.substr(fileName.size() - 3, fileName.size());
-  inputFile = fileName.substr(0, fileName.size() - 3);
-  std::cout << inputFile << std::endl;
-  if (extension != ".dj") {
-    printf("ERROR: %s must be called on files ending with \".dj\"\n", argv[0]);
-    exit(-1);
-  }
-
-  yyin = fopen(argv[1], "r");
-  if (yyin == NULL) {
-    printf("ERROR: could not open file %s\n", argv[1]);
-    exit(-1);
-  }
-  yyparse();
-  fclose(yyin);
-
-  setupSymbolTables(pgmAST);
-  typecheckProgram();
-
-  //  printAST(wholeProgram);
-  auto LLProgram = translateAST(wholeProgram);
-  LLProgram.print();
-
-  if (codegen) {
-    LLProgram.runOptimizations = optimizations;
-    LLProgram.codeGen();
-  }
+  std::string fileName = argv[argc - 1];
+  dj2ll(compilerFlags, fileName, argv);
 }
