@@ -1,47 +1,46 @@
 //-*-mode:java-*-
-class C extends Object{
+class C extends Object {
   nat n;
   C m;
-}
-main{
+} main {
   nat n;
   bool b;
   C c;
   c = new C();
   c.m = c;
-  printNat(5+2*6);  //prints 17
-  printNat(5+(2*6)); //prints 17 and has same AST as previous expression
-  printNat((5+2)*6); //prints 42
-  b = false == 3 > 4 && !c.m instanceof C && b = c.n > 4 + 1 * 3; //Check AST!
-// AST for previous line should be:
-// 2:    ASSIGN_EXPR (ends on line 14)
-// 3:      AST_ID(b) (ends on line 14)
-// 3:      AND_EXPR (ends on line 14)
-// 4:        AND_EXPR (ends on line 14)
-// 5:          EQUALITY_EXPR (ends on line 14)
-// 6:            FALSE_LITERAL_EXPR(0) (ends on line 14)
-// 6:            LESS_THAN_EXPR (ends on line 14)
-// 7:              NAT_LITERAL_EXPR(3) (ends on line 14)
-// 7:              NAT_LITERAL_EXPR(4) (ends on line 14)
-// 5:          NOT_EXPR (ends on line 14)
-// 6:            INSTANCEOF_EXPR (ends on line 14)
-// 7:              DOT_ID_EXPR (ends on line 14)
-// 8:                ID_EXPR (ends on line 14)
-// 9:                  AST_ID(c) (ends on line 14)
-// 8:                AST_ID(m) (ends on line 14)
-// 7:              AST_ID(C) (ends on line 14)
-// 4:        ASSIGN_EXPR (ends on line 14)
-// 5:          AST_ID(b) (ends on line 14)
-// 5:          LESS_THAN_EXPR (ends on line 14)
-// 6:            DOT_ID_EXPR (ends on line 14)
-// 7:              ID_EXPR (ends on line 14)
-// 8:                AST_ID(c) (ends on line 14)
-// 7:              AST_ID(n) (ends on line 14)
-// 6:            PLUS_EXPR (ends on line 14)
-// 7:              NAT_LITERAL_EXPR(4) (ends on line 14)
-// 7:              TIMES_EXPR (ends on line 14)
-// 8:                NAT_LITERAL_EXPR(1) (ends on line 14)
-// 8:                NAT_LITERAL_EXPR(3) (ends on line 14)
+  printNat(5 + 2 * 6);   // prints 17
+  printNat(5 + (2 * 6)); // prints 17 and has same AST as previous expression
+  printNat((5 + 2) * 6); // prints 42
+  b = false == 3 > 4 &&!c.m instanceof C &&b = c.n > 4 + 1 * 3; // Check AST!
+  // AST for previous line should be:
+  // 2:    ASSIGN_EXPR (ends on line 14)
+  // 3:      AST_ID(b) (ends on line 14)
+  // 3:      AND_EXPR (ends on line 14)
+  // 4:        AND_EXPR (ends on line 14)
+  // 5:          EQUALITY_EXPR (ends on line 14)
+  // 6:            FALSE_LITERAL_EXPR(0) (ends on line 14)
+  // 6:            LESS_THAN_EXPR (ends on line 14)
+  // 7:              NAT_LITERAL_EXPR(3) (ends on line 14)
+  // 7:              NAT_LITERAL_EXPR(4) (ends on line 14)
+  // 5:          NOT_EXPR (ends on line 14)
+  // 6:            INSTANCEOF_EXPR (ends on line 14)
+  // 7:              DOT_ID_EXPR (ends on line 14)
+  // 8:                ID_EXPR (ends on line 14)
+  // 9:                  AST_ID(c) (ends on line 14)
+  // 8:                AST_ID(m) (ends on line 14)
+  // 7:              AST_ID(C) (ends on line 14)
+  // 4:        ASSIGN_EXPR (ends on line 14)
+  // 5:          AST_ID(b) (ends on line 14)
+  // 5:          LESS_THAN_EXPR (ends on line 14)
+  // 6:            DOT_ID_EXPR (ends on line 14)
+  // 7:              ID_EXPR (ends on line 14)
+  // 8:                AST_ID(c) (ends on line 14)
+  // 7:              AST_ID(n) (ends on line 14)
+  // 6:            PLUS_EXPR (ends on line 14)
+  // 7:              NAT_LITERAL_EXPR(4) (ends on line 14)
+  // 7:              TIMES_EXPR (ends on line 14)
+  // 8:                NAT_LITERAL_EXPR(1) (ends on line 14)
+  // 8:                NAT_LITERAL_EXPR(3) (ends on line 14)
 }
 
-//b = false == 3>4 && !((c.m) instanceof C) && b = c.n >4 + 1 * 3;
+// b = false == 3>4 && !((c.m) instanceof C) && b = c.n >4 + 1 * 3;
