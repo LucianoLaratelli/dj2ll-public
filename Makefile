@@ -21,16 +21,22 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 CSOURCES=ast.c symtbl.c typecheck.c util.c dj.tab.c typeErrors.c
-CXXSOURCES=codegen.cpp codeGenClass.cpp dj2ll.cpp llast.cpp translateAST.cpp
+CXXSOURCES=codegen.cpp codeGenClass.cpp llast.cpp translateAST.cpp
+DJ2LLMAIN=dj2ll.cpp
+TESTMAIN=test.cpp
 OBJECTS=ast.o dj.tab.o symtbl.o typecheck.o typeErrors.o util.o
 
 dj2ll: lex.yy.c $(CSOURCES) $(CXXSOURCES)
 	$(CC)  $(CFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
-	$(CXX)  $(CFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs all` $(OBJECTS) $(CXXSOURCES) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
+	$(CXX)  $(CFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs all` $(OBJECTS) $(CXXSOURCES) $(DJ2LLMAIN) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
 
 debug: lex.yy.c $(CSOURCES) $(CXXSOURCES)
 	$(CC)  $(DFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
-	$(CXX)  $(DFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs all` $(OBJECTS) $(CXXSOURCES) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
+	$(CXX)  $(DFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs all` $(OBJECTS) $(CXXSOURCES) $(DJ2LLMAIN) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
+
+test: lex.yy.c $(CSOURCES) $(CXXSOURCES)
+	$(CC)  $(CFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
+	$(CXX)  $(CFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs all` $(OBJECTS) $(CXXSOURCES) $(TESTMAIN) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
 
 dj.tab.c: dj.y
 	$(BISON) dj.y
