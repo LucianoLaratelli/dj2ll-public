@@ -22,6 +22,7 @@
 #include "codeGenClass.hpp"
 #include "llast.hpp"
 #include "llvm_includes.hpp"
+#include "translateAST.hpp"
 #include "util.h"
 #include <algorithm>
 #include <cassert>
@@ -44,6 +45,23 @@ extern std::string inputFile;
 static std::map<std::string, llvm::StructType *> allocatedClasses;
 static std::map<std::string, std::vector<llvm::Type *>> classSizes;
 static std::unique_ptr<llvm::Module> TheModule;
+
+Type *getLLVMTypeFromDJType(int djType) {
+  switch (djType) {
+  case TYPE_BOOL: {
+    return Type::getInt1Ty(TheContext);
+    break;
+  }
+  case TYPE_NAT: {
+    return Type::getInt32Ty(TheContext);
+    break;
+  }
+  default: {
+    return PointerType::getUnqual(allocatedClasses[typeString(djType)]);
+    break;
+  }
+  }
+}
 
 std::vector<Type *> calculateInheritedStorageNeeds(
     int classNum, std::map<std::string, llvm::StructType *> &allocatedClasses) {
@@ -193,11 +211,11 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
     allocatedClasses[classesST[i].className]->setBody(
         classSizes[classesST[i].className]);
   }
-  // emit static variable declarations
-  // DJ treats static variables the way java does, as globals that are specific
-  // to any object of that class, even if that object does not exist; (new
-  // A()).a accesses the same object as allocatedA.a
   for (int i = 0; i < numClasses; i++) {
+    // emit static variable declarations. DJ treats static variables the way
+    // java does, as globals that are specific to any object of that class, even
+    // if that object does not exist; (new A()).a accesses the same object as
+    // allocatedA.a)
     for (int j = 0; j < classesST[i].numStaticVars; j++) {
       auto var = classesST[i].staticVarList[j];
       /*the class that declares this static variable*/
@@ -226,12 +244,27 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
             GlobalValue::LinkageTypes::ExternalLinkage, 0, name);
       }
     }
+    // emit method declarations
+    std::vector<Type *> functionArgs;
+    llvm::FunctionType *methodType;
+    for (int j = 0; j < classesST[i].numMethods; j++) {
+      auto methodST = classesST[i].methodList[j];
+      functionArgs = {getLLVMTypeFromDJType(methodST.paramType)};
+      methodType = FunctionType::get(getLLVMTypeFromDJType(methodST.returnType),
+                                     functionArgs, false);
+      auto method =
+          Function::Create(methodType, llvm::Function::ExternalLinkage,
+                           methodST.methodName, TheModule.get());
+      Builder.SetInsertPoint(createBB(method, "entry"));
+      // build method ST then pass here
+      for (const auto &e : translateExprList(methodST.bodyExprs)) {
+        e.codeGen();
+      }
+    }
   }
+
   // for (auto c : classes) {
   //   last = c->codeGen(context);
-  // }
-  // for (auto m : mainDecls) {
-  //   last = m->codeGen(context);
   // }
 
   /*emit runtime function `printNat()`, which is really just the system
