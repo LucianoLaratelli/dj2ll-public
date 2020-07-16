@@ -258,6 +258,8 @@ void generateMethodST(int classNum, int methodNum) {
     }
   }
   NamedValues[methodName] = genericSymbolTable;
+  // TODO: a method's symbol table can also include any non-overshadowed
+  // variable declarations from the class that declares it
 }
 
 Function *DJProgram::codeGen(symbolTable ST, int type) {
@@ -337,7 +339,12 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
       for (const auto &e : translateExprList(methodST.bodyExprs)) {
         last = e->codeGen(NamedValues[methodName]);
       }
-      Builder.CreateRet(last);
+      if (methodST.returnType >= OBJECT_TYPE) {
+        Builder.CreateRet(Builder.CreatePointerCast(
+            last, getLLVMTypeFromDJType(methodST.returnType)));
+      } else {
+        Builder.CreateRet(last);
+      }
     }
   }
 
