@@ -257,6 +257,14 @@ void generateMethodST(int classNum, int methodNum) {
       break;
     }
   }
+  // done with method locals and the parameter. now we add the variables from
+  // the class declaration that were not shadowed by the method locals.
+  auto declaringClassST = NamedValues[className];
+  for (const auto &var : declaringClassST) {
+    if (genericSymbolTable.find(var.first) == genericSymbolTable.end()) {
+      genericSymbolTable[var.first] = declaringClassST[var.first];
+    }
+  }
   NamedValues[methodName] = genericSymbolTable;
   // TODO: a method's symbol table can also include any non-overshadowed
   // variable declarations from the class that declares it
@@ -663,6 +671,10 @@ Value *DJAssign::codeGen(symbolTable ST, int type) {
     return V;
   }
   auto V = RHS->codeGen(ST);
+  if (V->getType() != Type::getInt32Ty(TheContext) ||
+      V->getType() != Type::getInt1Ty(TheContext)) {
+    V = Builder.CreatePointerCast(V, getLLVMTypeFromDJType(LHSType));
+  }
   Builder.CreateStore(V, ST[LHS]);
   return V;
 }
@@ -747,6 +759,10 @@ Value *DJDotId::codeGen(symbolTable ST, int type) {
 Value *DJDotAssign::codeGen(symbolTable ST, int type) {
   auto varInfo = varIsStaticInAnySuperClass(ID, objectLikeType);
   auto ret = assignVal->codeGen(ST);
+  if (ret->getType() != Type::getInt32Ty(TheContext) ||
+      ret->getType() != Type::getInt1Ty(TheContext)) {
+    ret = Builder.CreatePointerCast(ret, getLLVMTypeFromDJType(objectLikeType));
+  }
   if (varInfo.first) {
     // because of subtyping, the program may be talking about A.b (where A
     // extends B) and b is actually a static field of class B. varIsStatic...
@@ -766,15 +782,17 @@ Value *DJDotAssign::codeGen(symbolTable ST, int type) {
           allocatedClasses[typeString(objectLikeType)], objectLike->codeGen(ST),
           elementIndex);
       Builder.Insert(I);
-      auto ret = assignVal->codeGen(ST, objectLikeType);
+      ret = assignVal->codeGen(ST, objectLikeType);
+      ret =
+          Builder.CreatePointerCast(ret, getLLVMTypeFromDJType(objectLikeType));
       Builder.CreateStore(ret, I);
-      return ret;
+    } else {
+      auto I = GetElementPtrInst::Create(
+          allocatedClasses[typeString(objectLikeType)], objectLike->codeGen(ST),
+          elementIndex);
+      Builder.Insert(I);
+      Builder.CreateStore(ret, I);
     }
-    auto I =
-        GetElementPtrInst::Create(allocatedClasses[typeString(objectLikeType)],
-                                  objectLike->codeGen(ST), elementIndex);
-    Builder.Insert(I);
-    Builder.CreateStore(ret, I);
   }
   return ret;
 }
