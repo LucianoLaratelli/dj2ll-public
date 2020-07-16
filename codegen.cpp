@@ -295,7 +295,9 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
   }
   // translate DJ symbol tables into LLVM symbol tables, stored in global
   // NamedValues
-  emitITable();
+  if (hasInstanceOf) {
+    emitITable();
+  }
   for (int i = 0; i < numClasses; i++) {
     // emit static variable declarations. DJ treats static variables the way
     // java does, as globals that are specific to any object of that class, even
