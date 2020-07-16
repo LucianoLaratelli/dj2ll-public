@@ -197,11 +197,72 @@ void emitITable() {
   Builder.CreateRet(ConstantInt::get(TheContext, APInt(1, 0)));
 }
 
+void generateMethodST(int classNum, int methodNum) {
+  // generate symbol tables of LLVM types from the old symbol tables generated
+  // in symbtbl.c for the requested method.
+
+  // methods are stored as "<declaring_class>_method_<method_name>" because a
+  // class and its superclass can declare methods with the same name. you may
+  // also notice that the global NamedValues symbol table allows for collisions
+  // between class and method names; the naming scheme designed above prevents
+  // this
+  std::map<std::string, llvm::AllocaInst *> genericSymbolTable;
+  auto classDecl = classesST[classNum];
+  auto className = std::string(classDecl.className);
+  auto method = classDecl.methodList[methodNum];
+  auto methodName = className + "_method_" + method.methodName;
+  switch (method.paramType) {
+  case TYPE_NAT:
+    genericSymbolTable[method.paramName] = Builder.CreateAlloca(
+        Type::getInt32Ty(TheContext), nullptr, method.paramName);
+    Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, 0)),
+                        genericSymbolTable[method.paramName]);
+    break;
+  case TYPE_BOOL:
+    genericSymbolTable[method.paramName] = Builder.CreateAlloca(
+        Type::getInt1Ty(TheContext), nullptr, method.paramName);
+    Builder.CreateStore(ConstantInt::get(TheContext, APInt(1, 0)),
+                        genericSymbolTable[method.paramName]);
+    break;
+  default:
+    char *varType = typeString(method.paramType);
+    genericSymbolTable[method.paramName] =
+        Builder.CreateAlloca(PointerType::getUnqual(allocatedClasses[varType]),
+                             // PointerType::get(allocatedClasses[varType],0),
+                             genericSymbolTable[method.paramName]);
+    break;
+  }
+  for (int k = 0; k < method.numLocals; k++) {
+    auto var = method.localST[k];
+    auto name = var.varName;
+    switch (var.type) {
+    case TYPE_NAT:
+      genericSymbolTable[name] =
+          Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, name);
+      Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, 0)),
+                          genericSymbolTable[name]);
+      break;
+    case TYPE_BOOL:
+      genericSymbolTable[name] =
+          Builder.CreateAlloca(Type::getInt1Ty(TheContext), nullptr, name);
+      Builder.CreateStore(ConstantInt::get(TheContext, APInt(1, 0)),
+                          genericSymbolTable[name]);
+      break;
+    default:
+      char *varTypeString = typeString(var.type);
+      genericSymbolTable[name] = Builder.CreateAlloca(
+          PointerType::getUnqual(allocatedClasses[varTypeString]),
+          // PointerType::get(allocatedClasses[varType],0),
+          genericSymbolTable[name]);
+      break;
+    }
+  }
+  NamedValues[methodName] = genericSymbolTable;
+}
+
 Function *DJProgram::codeGen(symbolTable ST, int type) {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
-  Value *last = nullptr;
 
-  emitITable();
   for (int i = 0; i < numClasses; i++) {
     allocatedClasses[classesST[i].className] =
         llvm::StructType::create(TheContext, classesST[i].className);
@@ -211,15 +272,18 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
     allocatedClasses[classesST[i].className]->setBody(
         classSizes[classesST[i].className]);
   }
+  // translate DJ symbol tables into LLVM symbol tables, stored in global
+  // NamedValues
+  emitITable();
   for (int i = 0; i < numClasses; i++) {
     // emit static variable declarations. DJ treats static variables the way
     // java does, as globals that are specific to any object of that class, even
     // if that object does not exist; (new A()).a accesses the same object as
     // allocatedA.a)
+    auto declaredClass = std::string(classesST[i].className);
     for (int j = 0; j < classesST[i].numStaticVars; j++) {
       auto var = classesST[i].staticVarList[j];
       /*the class that declares this static variable*/
-      auto declaredClass = std::string(classesST[i].className);
       auto name = declaredClass + "." + var.varName;
       switch (var.type) {
       case TYPE_NAT:
@@ -249,17 +313,20 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
     llvm::FunctionType *methodType;
     for (int j = 0; j < classesST[i].numMethods; j++) {
       auto methodST = classesST[i].methodList[j];
+      auto methodName = declaredClass + "_method_" + methodST.methodName;
       functionArgs = {getLLVMTypeFromDJType(methodST.paramType)};
       methodType = FunctionType::get(getLLVMTypeFromDJType(methodST.returnType),
                                      functionArgs, false);
       auto method =
           Function::Create(methodType, llvm::Function::ExternalLinkage,
-                           methodST.methodName, TheModule.get());
+                           methodName, TheModule.get());
       Builder.SetInsertPoint(createBB(method, "entry"));
-      // build method ST then pass here
+      generateMethodST(i, j);
+      Value *last = nullptr;
       for (const auto &e : translateExprList(methodST.bodyExprs)) {
-        e.codeGen();
+        last = e->codeGen(NamedValues[methodName]);
       }
+      Builder.CreateRet(last);
     }
   }
 
@@ -309,6 +376,7 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
     }
   }
   NamedValues["main"] = MainSymbolTable;
+  Value *last = nullptr;
   for (auto e : mainExprs) {
     last = e->codeGen(NamedValues["main"]);
   }
