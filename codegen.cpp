@@ -263,6 +263,17 @@ void generateMethodST(int classNum, int methodNum) {
 Function *DJProgram::codeGen(symbolTable ST, int type) {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
 
+  /*emit runtime function `printNat()`, which is really just the system
+   * printf*/
+  std::vector<Type *> args;
+  args.push_back(Type::getInt8PtrTy(TheContext));
+  FunctionType *printfType =
+      FunctionType::get(Builder.getInt32Ty(), args, true);
+  Function::Create(printfType, Function::ExternalLinkage, "printf",
+                   TheModule.get());
+  /*emit runtime function `readNat()`, which is really just the system scanf*/
+  Function::Create(printfType, Function::ExternalLinkage, "scanf",
+                   TheModule.get());
   for (int i = 0; i < numClasses; i++) {
     allocatedClasses[classesST[i].className] =
         llvm::StructType::create(TheContext, classesST[i].className);
@@ -334,17 +345,6 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
   //   last = c->codeGen(context);
   // }
 
-  /*emit runtime function `printNat()`, which is really just the system
-   * printf*/
-  std::vector<Type *> args;
-  args.push_back(Type::getInt8PtrTy(TheContext));
-  FunctionType *printfType =
-      FunctionType::get(Builder.getInt32Ty(), args, true);
-  Function::Create(printfType, Function::ExternalLinkage, "printf",
-                   TheModule.get());
-  /*emit runtime function `readNat()`, which is really just the system scanf*/
-  Function::Create(printfType, Function::ExternalLinkage, "scanf",
-                   TheModule.get());
   /*begin codegen for `main`*/
   Function *DJmain = createFunc(Builder, "main");
   BasicBlock *entry = createBB(DJmain, "entry");
