@@ -103,6 +103,7 @@ std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds(
   // determine the storage needs of every class declared by the program
   std::map<std::string, std::vector<llvm::Type *>> ret;
   std::vector<llvm::Type *> members;
+  symbolTable genericST;
   for (int i = 0; i < numClasses; i++) {
     /*allocate `this` pointer*/
     members.push_back(
@@ -110,6 +111,7 @@ std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds(
     /*make space for class ID*/
     members.push_back(Type::getInt32Ty(TheContext));
     for (int j = 0; j < classesST[i].numVars; j++) {
+      genericST[classesST[i].varList[j].varName] = nullptr;
       switch (classesST[i].varList[j].type) {
       case BAD_TYPE:
       case NO_OBJECT:
@@ -137,6 +139,8 @@ std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds(
     members.insert(members.end(), inherited.begin(), inherited.end());
     ret[classesST[i].className] = members;
     members.clear();
+    NamedValues[typeString(i)] = genericST;
+    genericST.clear();
   }
   return ret;
 }
@@ -240,14 +244,6 @@ void generateMethodST(int classNum, int methodNum) {
           // PointerType::get(allocatedClasses[varType],0),
           genericSymbolTable[name]);
       break;
-    }
-  }
-  // done with method locals and the parameter. now we add the variables from
-  // the class declaration that were not shadowed by the method locals.
-  auto declaringClassST = NamedValues[className];
-  for (const auto &var : declaringClassST) {
-    if (genericSymbolTable.find(var.first) == genericSymbolTable.end()) {
-      genericSymbolTable[var.first] = declaringClassST[var.first];
     }
   }
   NamedValues[methodName] = genericSymbolTable;
@@ -804,6 +800,16 @@ Value *DJDotMethodCall::codeGen(symbolTable ST, int type) {
   auto className = std::string(typeString(objectLikeType));
   auto LLMethodName = className + "_method_" + methodName;
   symbolTable methodST = NamedValues[LLMethodName];
+  symbolTable classST = NamedValues[className];
+  for (const auto &var : methodST) {
+    if (classST.find(var.first) != classST.end()) {
+      methodST[var.first] = classST[var.first];
+    }
+  }
+  // TODO: CODEGEN OBJECTLIKE
+  // THAT IS THE POINTER FROM WHICH YOU GET THE VALUES IN THE METHOD SYMBOL
+  // TABLE. ESSENTIALLY: CODE GEN OBJECT LIKE. LOAD FROM OBJECT LIKE INTO
+  // METHODST.
   Function *TheMethod = TheModule->getFunction(LLMethodName);
   if (paramDeclaredType >= OBJECT_TYPE) {
     return Builder.CreateCall(
