@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
   compilerFlags["optimizations"] = false;
   if (argc < 2) {
     printf("Usage: %s [flags] filename\n", argv[0]);
-    printf("I also know about these flags:\n%s--skip-codegen\n%s--run-optis\n",
+    printf("I know about these flags:\n%s--skip-codegen\n%s--run-optis\n",
            FOURSPACES, FOURSPACES);
     exit(-1);
   } else if (argc > 2) {
@@ -21,9 +21,8 @@ int main(int argc, char **argv) {
     } else if (findCLIOption(argv, argv + argc, "--run-optis")) {
       compilerFlags["optimizations"] = true;
     } else {
-      printf(
-          "I only know about these flags:\n%s--skip-codegen\n%s--run-optis\n",
-          FOURSPACES, FOURSPACES);
+      printf("I only know these flags:\n%s--skip-codegen\n%s--run-optis\n",
+             FOURSPACES, FOURSPACES);
       exit(-1);
     }
   }

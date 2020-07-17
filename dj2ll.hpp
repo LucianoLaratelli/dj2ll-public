@@ -18,6 +18,9 @@ VarDecl *mainBlockST;
 int numClasses;
 ClassDecl *classesST;
 std::string inputFile;
+int instanceOfSeen;
+int printNatSeen;
+int readNatSeen;
 
 extern FILE *yyin;
 extern FILE *yyout;
