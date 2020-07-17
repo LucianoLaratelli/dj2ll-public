@@ -211,27 +211,12 @@ void generateMethodST(int classNum, int methodNum) {
   auto className = std::string(classDecl.className);
   auto method = classDecl.methodList[methodNum];
   auto methodName = className + "_method_" + method.methodName;
-  switch (method.paramType) {
-  case TYPE_NAT:
-    genericSymbolTable[method.paramName] = Builder.CreateAlloca(
-        Type::getInt32Ty(TheContext), nullptr, method.paramName);
-    Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, 0)),
-                        genericSymbolTable[method.paramName]);
-    break;
-  case TYPE_BOOL:
-    genericSymbolTable[method.paramName] = Builder.CreateAlloca(
-        Type::getInt1Ty(TheContext), nullptr, method.paramName);
-    Builder.CreateStore(ConstantInt::get(TheContext, APInt(1, 0)),
-                        genericSymbolTable[method.paramName]);
-    break;
-  default:
-    char *varType = typeString(method.paramType);
-    genericSymbolTable[method.paramName] =
-        Builder.CreateAlloca(PointerType::getUnqual(allocatedClasses[varType]),
-                             // PointerType::get(allocatedClasses[varType],0),
-                             genericSymbolTable[method.paramName]);
-    break;
-  }
+  // set parameter value to whatever is passed in
+  Function *LLMethod = TheModule->getFunction(methodName);
+  genericSymbolTable[method.paramName] = Builder.CreateAlloca(
+      LLMethod->getArg(0)->getType(), nullptr, method.paramName);
+  Builder.CreateStore(LLMethod->getArg(0),
+                      genericSymbolTable[method.paramName]);
   for (int k = 0; k < method.numLocals; k++) {
     auto var = method.localST[k];
     auto name = var.varName;
@@ -266,24 +251,26 @@ void generateMethodST(int classNum, int methodNum) {
     }
   }
   NamedValues[methodName] = genericSymbolTable;
-  // TODO: a method's symbol table can also include any non-overshadowed
-  // variable declarations from the class that declares it
 }
 
 Function *DJProgram::codeGen(symbolTable ST, int type) {
   TheModule = std::make_unique<Module>(inputFile, TheContext);
 
-  /*emit runtime function `printNat()`, which is really just the system
-   * printf*/
-  std::vector<Type *> args;
-  args.push_back(Type::getInt8PtrTy(TheContext));
-  FunctionType *printfType =
-      FunctionType::get(Builder.getInt32Ty(), args, true);
-  Function::Create(printfType, Function::ExternalLinkage, "printf",
-                   TheModule.get());
-  /*emit runtime function `readNat()`, which is really just the system scanf*/
-  Function::Create(printfType, Function::ExternalLinkage, "scanf",
-                   TheModule.get());
+  if (hasPrintNat || hasReadNat) {
+    std::vector<Type *> args;
+    args.push_back(Type::getInt8PtrTy(TheContext));
+    FunctionType *IOType = FunctionType::get(Builder.getInt32Ty(), args, true);
+    if (hasPrintNat) {
+      // emit runtime function `printNat()`, which is just system printf
+      Function::Create(IOType, Function::ExternalLinkage, "printf",
+                       TheModule.get());
+    }
+    if (hasReadNat) {
+      // emit runtime function `readNat()`, which is just system scanf
+      Function::Create(IOType, Function::ExternalLinkage, "scanf",
+                       TheModule.get());
+    }
+  }
   for (int i = 0; i < numClasses; i++) {
     allocatedClasses[classesST[i].className] =
         llvm::StructType::create(TheContext, classesST[i].className);
@@ -811,4 +798,19 @@ Value *DJInstanceOf::codeGen(symbolTable ST, int type) {
       ConstantInt::get(TheContext, APInt(32, classID))};
   Function *TheFunction = TheModule->getFunction("ITable");
   return Builder.CreateCall(TheFunction, ITableArgs);
+}
+
+Value *DJDotMethodCall::codeGen(symbolTable ST, int type) {
+  auto className = std::string(typeString(objectLikeType));
+  auto LLMethodName = className + "_method_" + methodName;
+  symbolTable methodST = NamedValues[LLMethodName];
+  Function *TheMethod = TheModule->getFunction(LLMethodName);
+  if (paramDeclaredType >= OBJECT_TYPE) {
+    return Builder.CreateCall(
+        TheMethod,
+        Builder.CreatePointerCast(methodParameter->codeGen(ST),
+                                  getLLVMTypeFromDJType(paramDeclaredType)));
+  } else {
+    return Builder.CreateCall(TheMethod, methodParameter->codeGen(ST));
+  }
 }
