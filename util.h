@@ -62,6 +62,8 @@ typedef struct {
   int isStatic;
 } classVarInfo;
 
+classVarInfo lookupVarIndex(char *identifier, int CCE, int lineNumber);
+
 void reportLookupError(char *requestedVar, int lineNumber);
 int lookupMainST(char *desired, int lineNumber);
 int lookupClassesST(char *desired, int lineNumber);
