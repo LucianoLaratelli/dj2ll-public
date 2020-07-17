@@ -148,6 +148,24 @@ extern ClassDecl *classesST;   // the array itself
 #endif
 
 #ifdef __cplusplus
+extern "C" int instanceOfSeen;
+#else
+extern int instanceOfSeen;
+#endif
+
+#ifdef __cplusplus
+extern "C" int readNatSeen;
+#else
+extern int readNatSeen;
+#endif
+
+#ifdef __cplusplus
+extern "C" int printNatSeen;
+#else
+extern int printNatSeen;
+#endif
+
+#ifdef __cplusplus
 }
 #endif
 #endif
