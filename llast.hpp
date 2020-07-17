@@ -27,6 +27,8 @@ public:
 class DJProgram : public DJNode {
 public:
   bool hasInstanceOf;
+  bool hasPrintNat;
+  bool hasReadNat;
   bool runOptimizations;
   // ClassDeclList classes;
   // VarDeclList mainDecls;
@@ -278,6 +280,26 @@ public:
   DJInstanceOf(DJExpression *objectLike, int objectLikeType, int classID)
       : objectLike(objectLike), objectLikeType(objectLikeType),
         classID(classID){};
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
+  void print(int offset = 0) override;
+  std::string className() override;
+};
+
+class DJDotMethodCall : public DJExpression {
+public:
+  DJExpression *objectLike;
+  int objectLikeType;
+  std::string methodName;
+  DJExpression *methodParameter;
+  std::string paramName;
+  int paramDeclaredType;
+  DJDotMethodCall(DJExpression *objectLike, int objectLikeType,
+                  std::string methodName, DJExpression *methodParameter,
+                  std::string paramName, int paramDeclaredType)
+      : objectLike(objectLike), objectLikeType(objectLikeType),
+        methodName(methodName), methodParameter(methodParameter),
+        paramName(paramName), paramDeclaredType(paramDeclaredType){};
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
