@@ -201,7 +201,7 @@ void emitITable() {
   Builder.CreateRet(ConstantInt::get(TheContext, APInt(1, 0)));
 }
 
-void generateMethodST(int classNum, int methodNum) {
+void generateMethodST(int classNum, int methodNum, int inheritedFrom = 0) {
   // generate symbol tables of LLVM types from the old symbol tables generated
   // in symbtbl.c for the requested method.
 
@@ -213,13 +213,21 @@ void generateMethodST(int classNum, int methodNum) {
   std::map<std::string, llvm::AllocaInst *> genericSymbolTable;
   auto classDecl = classesST[classNum];
   auto className = std::string(classDecl.className);
-  auto method = classDecl.methodList[methodNum];
+  MethodDecl method;
+  if (inheritedFrom == 0) {
+    method = classDecl.methodList[methodNum];
+  } else {
+    method = classesST[inheritedFrom].methodList[methodNum];
+  }
   auto methodName = className + "_method_" + method.methodName;
-  // set parameter value to whatever is passed in
   Function *LLMethod = TheModule->getFunction(methodName);
+  genericSymbolTable["this"] =
+      Builder.CreateAlloca(LLMethod->getArg(0)->getType(), nullptr, "this");
+  Builder.CreateStore(LLMethod->getArg(0), genericSymbolTable["this"]);
+  // set parameter value to whatever is passed in
   genericSymbolTable[method.paramName] = Builder.CreateAlloca(
-      LLMethod->getArg(0)->getType(), nullptr, method.paramName);
-  Builder.CreateStore(LLMethod->getArg(0),
+      LLMethod->getArg(1)->getType(), nullptr, method.paramName);
+  Builder.CreateStore(LLMethod->getArg(1),
                       genericSymbolTable[method.paramName]);
   for (int k = 0; k < method.numLocals; k++) {
     auto var = method.localST[k];
@@ -314,18 +322,50 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
             GlobalValue::LinkageTypes::ExternalLinkage, 0, name);
       }
     }
+  }
+  for (int i = 0; i < numClasses; i++) {
     // emit method declarations
     std::vector<Type *> functionArgs;
     llvm::FunctionType *methodType;
+    auto declaredClass = std::string(classesST[i].className);
     for (int j = 0; j < classesST[i].numMethods; j++) {
       auto methodST = classesST[i].methodList[j];
       auto methodName = declaredClass + "_method_" + methodST.methodName;
-      functionArgs = {getLLVMTypeFromDJType(methodST.paramType)};
+      functionArgs = {PointerType::getUnqual(allocatedClasses[declaredClass]),
+                      getLLVMTypeFromDJType(methodST.paramType)};
       methodType = FunctionType::get(getLLVMTypeFromDJType(methodST.returnType),
                                      functionArgs, false);
-      auto method =
+      Function::Create(methodType, llvm::Function::ExternalLinkage, methodName,
+                       TheModule.get());
+    }
+    // declare methods inherited from super classes, unless the current class
+    // overrides them
+    auto superClass = classesST[i].superclass;
+    while (superClass != NO_OBJECT) {
+      for (int j = 0; j < classesST[superClass].numMethods; j++) {
+        auto methodST = classesST[superClass].methodList[j];
+        auto methodName = declaredClass + "_method_" + methodST.methodName;
+        if (TheModule->getFunction(methodName) == nullptr) {
+          functionArgs = {
+              PointerType::getUnqual(allocatedClasses[declaredClass]),
+              getLLVMTypeFromDJType(methodST.paramType)};
+          methodType = FunctionType::get(
+              getLLVMTypeFromDJType(methodST.returnType), functionArgs, false);
           Function::Create(methodType, llvm::Function::ExternalLinkage,
                            methodName, TheModule.get());
+        }
+      }
+      superClass = classesST[superClass].superclass;
+    }
+  }
+  // now that methods are declared, let's actually fill out their bodies, set
+  // return values, etc
+  for (int i = 0; i < numClasses; i++) {
+    auto declaredClass = std::string(classesST[i].className);
+    for (int j = 0; j < classesST[i].numMethods; j++) {
+      auto methodST = classesST[i].methodList[j];
+      auto methodName = declaredClass + "_method_" + methodST.methodName;
+      auto method = TheModule->getFunction(methodName);
       Builder.SetInsertPoint(createBB(method, "entry"));
       generateMethodST(i, j);
       Value *last = nullptr;
@@ -339,12 +379,28 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
         Builder.CreateRet(last);
       }
     }
+    auto superClass = classesST[i].superclass;
+    while (superClass != NO_OBJECT) {
+      for (int j = 0; j < classesST[superClass].numMethods; j++) {
+        auto methodST = classesST[superClass].methodList[j];
+        auto methodName = declaredClass + "_method_" + methodST.methodName;
+        auto method = TheModule->getFunction(methodName);
+        Builder.SetInsertPoint(createBB(method, "entry"));
+        generateMethodST(i, j, superClass);
+        Value *last = nullptr;
+        for (const auto &e : translateExprList(methodST.bodyExprs)) {
+          last = e->codeGen(NamedValues[methodName]);
+        }
+        if (methodST.returnType >= OBJECT_TYPE) {
+          Builder.CreateRet(Builder.CreatePointerCast(
+              last, getLLVMTypeFromDJType(methodST.returnType)));
+        } else {
+          Builder.CreateRet(last);
+        }
+      }
+      superClass = classesST[superClass].superclass;
+    }
   }
-
-  // for (auto c : classes) {
-  //   last = c->codeGen(context);
-  // }
-
   /*begin codegen for `main`*/
   Function *DJmain = createFunc(Builder, "main");
   BasicBlock *entry = createBB(DJmain, "entry");
@@ -646,19 +702,59 @@ Value *DJFor::codeGen(symbolTable ST, int type) {
 }
 
 Value *DJId::codeGen(symbolTable ST, int type) {
+  std::cout << "STATIC CLASS NUM IN DJ ID: " << staticClassNum << std::endl;
+  std::cout << "STATIC CLASS NUM IN DJ ID: " << staticMemberNum << std::endl;
+  if (ST.find(ID) == ST.end()) { // var is a class variable or static
+    auto varInfo = varIsStaticInAnySuperClass(ID, staticClassNum);
+    if (varInfo.first) { // static var AKA global
+      auto actualID = varInfo.second + "." + ID;
+      return Builder.CreateLoad(GlobalValues[actualID], ID);
+    }
+    if (staticClassNum > 0) {
+      // test if we're in a method
+      std::vector<Value *> elementIndex = {
+          ConstantInt::get(TheContext, APInt(32, 0)),
+          ConstantInt::get(TheContext,
+                           APInt(32, getIndexOfRegularOrInheritedField(
+                                         ID, staticClassNum)))};
+      return Builder.CreateLoad(
+          Builder.CreateGEP(Builder.CreateLoad(ST["this"]), elementIndex), ID);
+    }
+  }
   return Builder.CreateLoad(ST[ID], ID);
 }
 
 Value *DJAssign::codeGen(symbolTable ST, int type) {
+  // TODO: USE STATIC MEMBER NUM TO LOAD FROM GEP ETC FOR THIS WHEN WE HAVE A
+  // VARIABLE THAT'S FROM A POINTER
+  Value *V = nullptr;
   if (hasNullChild) {
-    auto V = RHS->codeGen(ST, LHSType);
-    Builder.CreateStore(V, ST[LHS]);
-    return V;
+    V = RHS->codeGen(ST, LHSType);
   }
-  auto V = RHS->codeGen(ST);
-  if (V->getType() != Type::getInt32Ty(TheContext) ||
-      V->getType() != Type::getInt1Ty(TheContext)) {
+  V = RHS->codeGen(ST);
+  if (!V->getType()->isIntegerTy()) {
     V = Builder.CreatePointerCast(V, getLLVMTypeFromDJType(LHSType));
+  }
+  if (ST.find(LHS) == ST.end()) { // var is a class variable or static
+    auto varInfo = varIsStaticInAnySuperClass(LHS, staticClassNum);
+    if (varInfo.first) { // static var AKA global
+      auto actualID = varInfo.second + "." + LHS;
+      Builder.CreateStore(V, GlobalValues[actualID]);
+      return V;
+    }
+    if (staticClassNum > 0) {
+      // we are in a method and the requested variable is not a static variable
+      // nor is in in the method-local symbol table; this means it must be a
+      // class variable so we look at `this`
+      std::vector<Value *> elementIndex = {
+          ConstantInt::get(TheContext, APInt(32, 0)),
+          ConstantInt::get(TheContext,
+                           APInt(32, getIndexOfRegularOrInheritedField(
+                                         LHS, staticClassNum)))};
+      Builder.CreateStore(
+          V, Builder.CreateGEP(Builder.CreateLoad(ST["this"]), elementIndex));
+      return V;
+    }
   }
   Builder.CreateStore(V, ST[LHS]);
   return V;
@@ -685,8 +781,8 @@ int getClassID(std::string name) {
 }
 
 Value *DJNew::codeGen(symbolTable ST, int type) {
-  /* allocate a DJ class using system malloc, setting the `this` pointer and the
-   * class ID */
+  /* allocate a DJ class using system malloc, setting the `this` pointer and
+   * the class ID */
   auto typeSize = ConstantExpr::getSizeOf(allocatedClasses[assignee]);
   typeSize =
       ConstantExpr::getTruncOrBitCast(typeSize, Type::getInt64Ty(TheContext));
@@ -721,9 +817,9 @@ Value *DJDotId::codeGen(symbolTable ST, int type) {
   if (varInfo.first) {
     // because of subtyping, the program may be talking about A.b (where A
     // extends B) and b is actually a static field of class B. varIsStatic...
-    // checks the entire superclass hierarchy of the class called in the program
-    // (in this example, class A) to determine which class actually declared the
-    // static variable
+    // checks the entire superclass hierarchy of the class called in the
+    // program (in this example, class A) to determine which class actually
+    // declared the static variable
     auto actualID = varInfo.second + "." + ID;
     return Builder.CreateLoad(GlobalValues[actualID]);
   } else {
@@ -744,16 +840,15 @@ Value *DJDotId::codeGen(symbolTable ST, int type) {
 Value *DJDotAssign::codeGen(symbolTable ST, int type) {
   auto varInfo = varIsStaticInAnySuperClass(ID, objectLikeType);
   auto ret = assignVal->codeGen(ST);
-  if (ret->getType() != Type::getInt32Ty(TheContext) ||
-      ret->getType() != Type::getInt1Ty(TheContext)) {
+  if (!ret->getType()->isIntegerTy()) {
     ret = Builder.CreatePointerCast(ret, getLLVMTypeFromDJType(objectLikeType));
   }
   if (varInfo.first) {
     // because of subtyping, the program may be talking about A.b (where A
     // extends B) and b is actually a static field of class B. varIsStatic...
-    // checks the entire superclass hierarchy of the class called in the program
-    // (in this example, class A) to determine which class actually declared the
-    // static variable
+    // checks the entire superclass hierarchy of the class called in the
+    // program (in this example, class A) to determine which class actually
+    // declared the static variable
     auto actualID = varInfo.second + "." + ID;
     Builder.CreateStore(ret, GlobalValues[actualID]);
   } else {
@@ -801,22 +896,18 @@ Value *DJDotMethodCall::codeGen(symbolTable ST, int type) {
   auto LLMethodName = className + "_method_" + methodName;
   symbolTable methodST = NamedValues[LLMethodName];
   symbolTable classST = NamedValues[className];
-  for (const auto &var : methodST) {
-    if (classST.find(var.first) != classST.end()) {
-      methodST[var.first] = classST[var.first];
-    }
-  }
-  // TODO: CODEGEN OBJECTLIKE
-  // THAT IS THE POINTER FROM WHICH YOU GET THE VALUES IN THE METHOD SYMBOL
-  // TABLE. ESSENTIALLY: CODE GEN OBJECT LIKE. LOAD FROM OBJECT LIKE INTO
-  // METHODST.
   Function *TheMethod = TheModule->getFunction(LLMethodName);
+  std::vector<Value *> methodArgs = {objectLike->codeGen(ST)};
   if (paramDeclaredType >= OBJECT_TYPE) {
-    return Builder.CreateCall(
-        TheMethod,
+    methodArgs.push_back(
         Builder.CreatePointerCast(methodParameter->codeGen(ST),
                                   getLLVMTypeFromDJType(paramDeclaredType)));
   } else {
-    return Builder.CreateCall(TheMethod, methodParameter->codeGen(ST));
+    methodArgs.push_back(methodParameter->codeGen(ST));
   }
+  return Builder.CreateCall(TheMethod, methodArgs);
+}
+
+Value *DJThis::codeGen(symbolTable ST, int type) {
+  return Builder.CreateLoad(ST["this"]);
 }

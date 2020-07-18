@@ -50,6 +50,10 @@ public:
    * can have a child DJNull whose type is meaningful*/
   bool hasNullChild;
   int nullChildCount;
+  int staticClassNum;
+  std::string staticClassName;
+  int staticMemberNum;
+  std::string staticMemberName;
   virtual void print(int offset = 0) = 0;
   virtual std::string className() = 0;
 };
@@ -301,6 +305,15 @@ public:
         methodName(methodName), methodParameter(methodParameter),
         paramName(paramName), paramDeclaredType(paramDeclaredType){};
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
+  void print(int offset = 0) override;
+  std::string className() override;
+};
+
+class DJThis : public DJExpression {
+public:
+  // DJThis() : {};
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValue,
                        int type = -1) override;
   void print(int offset = 0) override;
   std::string className() override;
