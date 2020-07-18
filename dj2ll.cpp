@@ -1,4 +1,5 @@
 #include "dj2ll.hpp"
+#include "test.hpp"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -23,7 +24,8 @@ bool findCLIOption(char **begin, char **end, const std::string &flag) {
 }
 
 void runClang() {
-  std::string command = "clang " + inputFile + ".o" + " -o " + inputFile;
+  auto outputFile = trimFromLastOccurrence(inputFile, "/");
+  std::string command = "clang " + inputFile + ".o" + " -o " + outputFile;
   std::system(command.c_str());
 }
 
