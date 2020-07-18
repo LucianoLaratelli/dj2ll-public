@@ -115,13 +115,13 @@ void DJNew::print(int offset) {
 
 void DJDotId::print(int offset) {
   std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJ DOT ID ("
-            << typeString(objectLikeType) << ", " << ID << "):\n";
+            << typeString(staticClassNum) << ", " << ID << "):\n";
   objectLike->print(offset + 1);
 }
 
 void DJDotAssign::print(int offset) {
   std::cout << offset << ":" << std::string(4 * offset, ' ')
-            << "DJ DOT ASSIGN (" << typeString(objectLikeType) << ", " << ID
+            << "DJ DOT ASSIGN (" << typeString(staticClassNum) << ", " << ID
             << "):\n";
   objectLike->print(offset + 1);
   assignVal->print(offset + 1);

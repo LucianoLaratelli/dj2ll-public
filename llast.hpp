@@ -251,10 +251,9 @@ public:
 class DJDotId : public DJExpression {
 public:
   DJExpression *objectLike;
-  int objectLikeType;
   std::string ID;
-  DJDotId(DJExpression *objectLike, int objectLikeType, char *ID)
-      : objectLike(objectLike), objectLikeType(objectLikeType), ID(ID){};
+  DJDotId(DJExpression *objectLike, char *ID)
+      : objectLike(objectLike), ID(ID){};
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
@@ -264,13 +263,10 @@ public:
 class DJDotAssign : public DJExpression {
 public:
   DJExpression *objectLike;
-  int objectLikeType;
   std::string ID;
   DJExpression *assignVal;
-  DJDotAssign(DJExpression *objectLike, int objectLikeType, char *ID,
-              DJExpression *assignVal)
-      : objectLike(objectLike), objectLikeType(objectLikeType), ID(ID),
-        assignVal(assignVal){};
+  DJDotAssign(DJExpression *objectLike, char *ID, DJExpression *assignVal)
+      : objectLike(objectLike), ID(ID), assignVal(assignVal){};
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
@@ -280,11 +276,9 @@ public:
 class DJInstanceOf : public DJExpression {
 public:
   DJExpression *objectLike;
-  int objectLikeType;
   int classID;
-  DJInstanceOf(DJExpression *objectLike, int objectLikeType, int classID)
-      : objectLike(objectLike), objectLikeType(objectLikeType),
-        classID(classID){};
+  DJInstanceOf(DJExpression *objectLike, int classID)
+      : objectLike(objectLike), classID(classID){};
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
@@ -294,17 +288,16 @@ public:
 class DJDotMethodCall : public DJExpression {
 public:
   DJExpression *objectLike;
-  int objectLikeType;
   std::string methodName;
   DJExpression *methodParameter;
   std::string paramName;
   int paramDeclaredType;
-  DJDotMethodCall(DJExpression *objectLike, int objectLikeType,
-                  std::string methodName, DJExpression *methodParameter,
-                  std::string paramName, int paramDeclaredType)
-      : objectLike(objectLike), objectLikeType(objectLikeType),
-        methodName(methodName), methodParameter(methodParameter),
-        paramName(paramName), paramDeclaredType(paramDeclaredType){};
+  DJDotMethodCall(DJExpression *objectLike, std::string methodName,
+                  DJExpression *methodParameter, std::string paramName,
+                  int paramDeclaredType)
+      : objectLike(objectLike), methodName(methodName),
+        methodParameter(methodParameter), paramName(paramName),
+        paramDeclaredType(paramDeclaredType){};
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
