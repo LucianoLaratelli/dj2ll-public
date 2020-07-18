@@ -6,11 +6,11 @@ CXX=clang++
 CFLAGS=-O2
 ANNOY=-pedantic
 DFLAGS=-ggdb3 -O0 -fstandalone-debug
-WFLAGS=-Wall -Wpointer-arith -Woverloaded-virtual -Werror=return-type		\
+WFLAGS=-Wall -Wextra -Wno-unused-parameter -Wno-macro-redefined -Wunused-variable -Wunused-value -Wpointer-arith -Woverloaded-virtual -Werror=return-type		\
 -Werror=int-to-pointer-cast -Wtype-limits -Wempty-body -Wsign-compare		\
 -Wno-invalid-offsetof -Wno-c++0x-extensions -Wno-extended-offsetof			\
 -Wno-unknown-warning-option -Wno-return-type-c-linkage -Wno-mismatched-tags	\
--Wno-error=uninitialized -Wno-error=deprecated-declarations\
+-Wno-error=uninitialized -Wno-error=deprecated-declarations -Wunused-variable -Wunused-value -Wunused\
 
 BISON=bison
 SED=sed
