@@ -1,14 +1,16 @@
-class C1 extends Object { 
-  C1 f1; 
+//-*-mode:java-*-
+class C1 extends Object {
+  C1 f1;
   nat foo(nat un) {
-    printNat(12); 
-    f1=new C1(); 
-    printNat(13); 
-    f1.bar(5); 
+    printNat(12);
+    f1 = new C1();
+    printNat(13);
+    f1.bar(5);
     printNat(15);
   }
-  nat bar(nat un) {printNat(14);}
+  nat bar(nat un) { printNat(14); }
 }
+
 main {
   C1 c;
   c = new C1();

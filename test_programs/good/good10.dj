@@ -1,69 +1,78 @@
 //-*-mode:java-*-
-//Reads natural numbers, inserting them into a binary search tree.
-//Stops reading after a 0 is read.  At that point, the list of 
-//numbers is printed via an inorder tree traversal.
+// Reads natural numbers, inserting them into a binary search tree.
+// Stops reading after a 0 is read.  At that point, the list of
+// numbers is printed via an inorder tree traversal.
 
-//The net effect is that a list of numbers gets read, sorted, and printed 
-//in ascending order.
+// The net effect is that a list of numbers gets read, sorted, and printed
+// in ascending order.
 
 class BST extends Object {
   nat data;
   BST left;
   BST right;
 
-  //set the data value in the tree's root node to newData
-  //returns newData
-  nat setData(nat newData) { data=newData; }
+  // set the data value in the tree's root node to newData
+  // returns newData
+  nat setData(nat newData) { data = newData; }
 
-  //insert newData into the tree
-  //always returns 0
+  // insert newData into the tree
+  // always returns 0
   nat insert(nat newData) {
     BST newRight;
     BST newLeft;
-    if(newData > data) {
-      //insert into right subtree
-      if(right==null) {
+    if (newData > data) {
+      // insert into right subtree
+      if (right == null) {
         newRight = new BST();
         newRight.data = newData;
         right = newRight;
         0;
-      }
-      else { right.insert(newData); };
-    }
-    else {
-      //insert into left subtree
-      if(left==null) {
+      } else {
+        right.insert(newData);
+      };
+    } else {
+      // insert into left subtree
+      if (left == null) {
         newLeft = new BST();
         newLeft.data = newData;
         left = newLeft;
         0;
-      }
-      else { left.insert(newData); };
+      } else {
+        left.insert(newData);
+      };
     };
     0;
   }
 
-  //print the tree's data in order
-  //always returns 0
+  // print the tree's data in order
+  // always returns 0
   nat printTreeInorder(nat unused) {
-    if(left==null) {0;} else{left.printTreeInorder(0);};
+    if (left == null) {
+      0;
+    } else {
+      left.printTreeInorder(0);
+    };
     printNat(data);
-    if(right==null) {0;} else{right.printTreeInorder(0);};
+    if (right == null) {
+      0;
+    } else {
+      right.printTreeInorder(0);
+    };
   }
 }
 
 main {
   nat input;
-  //create a tree
+  // create a tree
   BST bst;
   bst = new BST();
 
-  //read data into the tree
+  // read data into the tree
   input = readNat();
-  for(bst.setData(input); !(input==0); bst.insert(input)) {
+  for (bst.setData(input); !(input == 0); bst.insert(input)) {
     input = readNat();
   };
 
-  //print the tree in order
+  // print the tree in order
   bst.printTreeInorder(0);
 }

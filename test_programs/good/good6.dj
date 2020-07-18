@@ -1,3 +1,4 @@
+// -*-mode:java-*-
 // This program tests the short-circuit && operation.
 // The correct output is:
 //  3
