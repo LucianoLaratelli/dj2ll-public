@@ -27,6 +27,8 @@ void runClang() {
   auto outputFile = trimFromLastOccurrence(inputFile, "/");
   std::string command = "clang " + inputFile + ".o" + " -o " + outputFile;
   std::system(command.c_str());
+  std::string rmCommand = "rm " + inputFile + ".o";
+  std::system(rmCommand.c_str());
 }
 
 void dj2ll(std::map<std::string, bool> compilerFlags, std::string fileName,
