@@ -442,10 +442,10 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
     last = ConstantInt::get(TheContext, APInt(32, 0));
   }
   Builder.CreateRet(last); /*done with code gen*/
-
-  std::cout << "****************\n";
-  TheModule->print(outs(), nullptr);
-  std::cout << "****************\n";
+  if (emitLLVM) {
+    std::cout << "\n\n";
+    TheModule->print(outs(), nullptr);
+  }
   llvm::Module *test = TheModule.get();
   llvm::verifyModule(*test, &llvm::errs());
   if (runOptimizations) {
@@ -702,8 +702,6 @@ Value *DJFor::codeGen(symbolTable ST, int type) {
 }
 
 Value *DJId::codeGen(symbolTable ST, int type) {
-  std::cout << "STATIC CLASS NUM IN DJ ID: " << staticClassNum << std::endl;
-  std::cout << "STATIC CLASS NUM IN DJ ID: " << staticMemberNum << std::endl;
   if (ST.find(ID) == ST.end()) { // var is a class variable or static
     auto varInfo = varIsStaticInAnySuperClass(ID, staticClassNum);
     if (varInfo.first) { // static var AKA global

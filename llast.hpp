@@ -30,6 +30,7 @@ public:
   bool hasPrintNat;
   bool hasReadNat;
   bool runOptimizations;
+  bool emitLLVM;
   // ClassDeclList classes;
   // VarDeclList mainDecls;
   ExprList mainExprs;

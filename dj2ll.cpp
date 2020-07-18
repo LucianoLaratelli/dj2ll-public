@@ -1,31 +1,62 @@
+#include "dj2ll.hpp"
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <map>
 #include <string>
 
-#include "dj2ll.hpp"
+ASTree *wholeProgram;
+ASTree *mainExprs;
+int numMainBlockLocals;
+VarDecl *mainBlockST;
+int numClasses;
+ClassDecl *classesST;
+std::string inputFile;
+int instanceOfSeen;
+int printNatSeen;
+int readNatSeen;
 
-int main(int argc, char **argv) {
-  std::map<std::string, bool> compilerFlags;
-  compilerFlags["codegen"] = true;
-  compilerFlags["optimizations"] = false;
-  if (argc < 2) {
-    printf("Usage: %s [flags] filename\n", argv[0]);
-    printf("I know about these flags:\n%s--skip-codegen\n%s--run-optis\n",
-           FOURSPACES, FOURSPACES);
+bool findCLIOption(char **begin, char **end, const std::string &flag) {
+  return std::find(begin, end, flag) != end;
+}
+
+void runClang() {
+  std::string command = "clang " + inputFile + ".o" + " -o " + inputFile;
+  std::system(command.c_str());
+}
+
+void dj2ll(std::map<std::string, bool> compilerFlags, std::string fileName,
+           char **argv) {
+  std::string extension = fileName.substr(fileName.size() - 3, fileName.size());
+  inputFile = fileName.substr(0, fileName.size() - 3);
+  if (extension != ".dj") {
+    printf("ERROR: %s must be called on files ending with \".dj\"\n", argv[0]);
     exit(-1);
-  } else if (argc > 2) {
-    if (findCLIOption(argv, argv + argc, "--skip-codegen")) {
-      compilerFlags["codegen"] = false;
-    } else if (findCLIOption(argv, argv + argc, "--run-optis")) {
-      compilerFlags["optimizations"] = true;
-    } else {
-      printf("I only know these flags:\n%s--skip-codegen\n%s--run-optis\n",
-             FOURSPACES, FOURSPACES);
-      exit(-1);
-    }
   }
-  std::string fileName = argv[argc - 1];
-  dj2ll(compilerFlags, fileName, argv);
+
+  yyin = fopen(fileName.c_str(), "r");
+  if (yyin == NULL) {
+    printf("ERROR: could not open file %s\n", fileName.c_str());
+    exit(-1);
+  }
+  yyparse();
+  fclose(yyin);
+
+  setupSymbolTables(pgmAST);
+  typecheckProgram();
+
+  auto LLProgram = translateAST(wholeProgram);
+  if (compilerFlags["verbose"]) {
+    LLProgram.print();
+  }
+
+  if (compilerFlags["codegen"]) {
+    LLProgram.runOptimizations = compilerFlags["optimizations"];
+    LLProgram.emitLLVM = compilerFlags["emitLLVM"];
+    symbolTable ST; /*throwaway*/
+    LLProgram.codeGen(ST);
+  }
+  runClang();
 }
