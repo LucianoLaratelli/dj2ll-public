@@ -8,24 +8,27 @@ from pygments.lexers import JavaLexer
 from pygments.formatters import Terminal256Formatter as T256F
 
 ignore_list = [
-    "good6.dj",
-    "good7.dj",
-    "good8.dj",
+    "good06.dj",
+    "good07.dj",
+    "good08.dj",
+    "good09.dj",
     "good15.dj",
     "good17.dj",
     "good19.dj",
     "good20.dj",
     "good21.dj",
+    "good22.dj",
     "good30.dj",
     "good33.dj",
+    "goodMine1.dj",
 ]
 
 
 def main():
     pp = pprint.PrettyPrinter(indent=4)
-    files = os.listdir("test_programs/good")
-    files = [file for file in files if file not in ignore_list]
-    files.sort()
+    files = sorted(
+        [f for f in os.listdir("test_programs/good") if f not in ignore_list]
+    )
     for file in files:
         fileName = f"test_programs/good/{file}"
         with open(fileName) as f:
@@ -39,7 +42,8 @@ def main():
             print(asterisks)
             reply = str(input("(press [enter] to continue):")).strip()
             if reply != "":
-                sys.exit()
+                break
+    os.system("rm good*")
 
 
 if __name__ == "__main__":
