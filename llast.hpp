@@ -313,4 +313,20 @@ public:
   std::string className() override;
 };
 
+class DJUndotMethodCall : public DJExpression {
+public:
+  std::string methodName;
+  DJExpression *methodParameter;
+  std::string paramName;
+  int paramDeclaredType;
+  DJUndotMethodCall(std::string methodName, DJExpression *methodParameter,
+                    std::string paramName, int paramDeclaredType)
+      : methodName(methodName), methodParameter(methodParameter),
+        paramName(paramName), paramDeclaredType(paramDeclaredType){};
+  llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
+                       int type = -1) override;
+  void print(int offset = 0) override;
+  std::string className() override;
+};
+
 #endif // __LLAST_H_

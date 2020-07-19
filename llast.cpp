@@ -143,6 +143,12 @@ void DJThis::print(int offset) {
   std::cout << offset << ":" << std::string(4 * offset, ' ') << "DJThis\n";
 }
 
+void DJUndotMethodCall::print(int offset) {
+  std::cout << offset << ":" << std::string(4 * offset, ' ')
+            << "DJ UNDOT METHOD CALL\n";
+  // TODO: do
+}
+
 std::string DJNat::className() { return "DJNat"; }
 
 std::string DJFalse::className() { return "DJFalse"; }
@@ -188,3 +194,5 @@ std::string DJInstanceOf::className() { return "DJInstanceOf"; }
 std::string DJDotMethodCall::className() { return "DJDotMethodCall"; }
 
 std::string DJThis::className() { return "DJThis"; }
+
+std::string DJUndotMethodCall::className() { return "DJUndotMethodCall"; }
