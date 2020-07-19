@@ -732,26 +732,27 @@ Value *DJAssign::codeGen(symbolTable ST, int type) {
   Value *V = nullptr;
   if (hasNullChild) {
     V = RHS->codeGen(ST, LHSType);
-  }
-  V = RHS->codeGen(ST);
-  if (!V->getType()->isIntegerTy()) {
-    V = Builder.CreatePointerCast(V, getLLVMTypeFromDJType(LHSType));
-  }
-  if (ST.find(LHS) == ST.end()) { // var is a class variable or static
-    auto varInfo = varIsStaticInAnySuperClass(LHS, staticClassNum);
-    if (varInfo.first) { // static var AKA global
-      auto actualID = varInfo.second + "." + LHS;
-      Builder.CreateStore(V, GlobalValues[actualID]);
-      return V;
+  } else {
+    V = RHS->codeGen(ST);
+    if (!V->getType()->isIntegerTy()) {
+      V = Builder.CreatePointerCast(V, getLLVMTypeFromDJType(LHSType));
     }
-    if (staticClassNum > 0) {
-      // we are in a method and the requested variable is not a static variable
-      // nor is in in the method-local symbol table; this means it must be a
-      // class variable so we look at `this`
-      auto IDIndex = getGEPIndex(LHS, staticClassNum);
-      Builder.CreateStore(
-          V, Builder.CreateGEP(Builder.CreateLoad(ST["this"]), IDIndex));
-      return V;
+    if (ST.find(LHS) == ST.end()) { // var is a class variable or static
+      auto varInfo = varIsStaticInAnySuperClass(LHS, staticClassNum);
+      if (varInfo.first) { // static var AKA global
+        auto actualID = varInfo.second + "." + LHS;
+        Builder.CreateStore(V, GlobalValues[actualID]);
+        return V;
+      }
+      if (staticClassNum > 0) {
+        // we are in a method and the requested variable is not a static
+        // variable nor is in in the method-local symbol table; this means it
+        // must be a class variable so we look at `this`
+        auto IDIndex = getGEPIndex(LHS, staticClassNum);
+        Builder.CreateStore(
+            V, Builder.CreateGEP(Builder.CreateLoad(ST["this"]), IDIndex));
+        return V;
+      }
     }
   }
   Builder.CreateStore(V, ST[LHS]);
