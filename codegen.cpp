@@ -63,6 +63,14 @@ Type *getLLVMTypeFromDJType(int djType) {
   }
 }
 
+std::vector<Value *> getGEPIndex(std::string variable, int classID) {
+  std::vector<Value *> ret = {
+      ConstantInt::get(TheContext, APInt(32, 0)),
+      ConstantInt::get(TheContext, APInt(32, getIndexOfRegularOrInheritedField(
+                                                 variable, classID)))};
+  return ret;
+}
+
 std::vector<Type *> calculateInheritedStorageNeeds(
     int classNum, std::map<std::string, llvm::StructType *> &allocatedClasses) {
   // given a class ID, iterate inclusively from that class through all its
@@ -711,13 +719,8 @@ Value *DJId::codeGen(symbolTable ST, int type) {
     } else {
       // if the variable isn't in the symbol table and it isn't a global
       // variable, it must be a class variable. we use `this` to get at it.
-      std::vector<Value *> elementIndex = {
-          ConstantInt::get(TheContext, APInt(32, 0)),
-          ConstantInt::get(TheContext,
-                           APInt(32, getIndexOfRegularOrInheritedField(
-                                         ID, staticClassNum)))};
-      valToLoad =
-          Builder.CreateGEP(Builder.CreateLoad(ST["this"]), elementIndex);
+      auto IDIndex = getGEPIndex(ID, staticClassNum);
+      valToLoad = Builder.CreateGEP(Builder.CreateLoad(ST["this"]), IDIndex);
     }
   } else {
     valToLoad = ST[ID];
@@ -745,13 +748,9 @@ Value *DJAssign::codeGen(symbolTable ST, int type) {
       // we are in a method and the requested variable is not a static variable
       // nor is in in the method-local symbol table; this means it must be a
       // class variable so we look at `this`
-      std::vector<Value *> elementIndex = {
-          ConstantInt::get(TheContext, APInt(32, 0)),
-          ConstantInt::get(TheContext,
-                           APInt(32, getIndexOfRegularOrInheritedField(
-                                         LHS, staticClassNum)))};
+      auto IDIndex = getGEPIndex(LHS, staticClassNum);
       Builder.CreateStore(
-          V, Builder.CreateGEP(Builder.CreateLoad(ST["this"]), elementIndex));
+          V, Builder.CreateGEP(Builder.CreateLoad(ST["this"]), IDIndex));
       return V;
     }
   }
@@ -822,14 +821,10 @@ Value *DJDotId::codeGen(symbolTable ST, int type) {
     auto actualID = varInfo.second + "." + ID;
     return Builder.CreateLoad(GlobalValues[actualID]);
   } else {
-    std::vector<Value *> elementIndex = {
-        ConstantInt::get(TheContext, APInt(32, 0)),
-        ConstantInt::get(
-            TheContext,
-            APInt(32, getIndexOfRegularOrInheritedField(ID, staticClassNum)))};
+    auto IDIndex = getGEPIndex(ID, staticClassNum);
     auto I =
         GetElementPtrInst::Create(allocatedClasses[typeString(staticClassNum)],
-                                  objectLike->codeGen(ST), elementIndex);
+                                  objectLike->codeGen(ST), IDIndex);
     Builder.Insert(I);
     return Builder.CreateLoad(I);
   }
@@ -850,15 +845,11 @@ Value *DJDotAssign::codeGen(symbolTable ST, int type) {
     auto actualID = varInfo.second + "." + ID;
     Builder.CreateStore(ret, GlobalValues[actualID]);
   } else {
-    std::vector<Value *> elementIndex = {
-        ConstantInt::get(TheContext, APInt(32, 0)),
-        ConstantInt::get(
-            TheContext,
-            APInt(32, getIndexOfRegularOrInheritedField(ID, staticClassNum)))};
+    auto IDIndex = getGEPIndex(ID, staticClassNum);
     if (hasNullChild) {
       auto I = GetElementPtrInst::Create(
           allocatedClasses[typeString(staticClassNum)], objectLike->codeGen(ST),
-          elementIndex);
+          IDIndex);
       Builder.Insert(I);
       ret = assignVal->codeGen(ST, staticClassNum);
       ret =
@@ -867,7 +858,7 @@ Value *DJDotAssign::codeGen(symbolTable ST, int type) {
     } else {
       auto I = GetElementPtrInst::Create(
           allocatedClasses[typeString(staticClassNum)], objectLike->codeGen(ST),
-          elementIndex);
+          IDIndex);
       Builder.Insert(I);
       Builder.CreateStore(ret, I);
     }
@@ -876,6 +867,9 @@ Value *DJDotAssign::codeGen(symbolTable ST, int type) {
 }
 
 Value *DJInstanceOf::codeGen(symbolTable ST, int type) {
+  // using the class ID stored at the 1th field in the struct, call the ITable
+  // function to determine if the type of the testee expression is a subtype of
+  // the classID
   Value *testee = objectLike->codeGen(ST);
   std::vector<Value *> elementIndex = {
       ConstantInt::get(TheContext, APInt(32, 0)),
