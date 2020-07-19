@@ -545,7 +545,6 @@ Value *DJPrint::codeGen(symbolTable ST, int type) {
 }
 
 Value *DJRead::codeGen(symbolTable ST, int type) {
-  Builder.GetInsertBlock()->getParent();
   Value *requestStr = Builder.CreateGlobalStringPtr("Enter a natural number: ");
   std::vector<Value *> requestArgs = {requestStr};
   Builder.CreateCall(TheModule->getFunction("printf"), requestArgs);
@@ -702,24 +701,28 @@ Value *DJFor::codeGen(symbolTable ST, int type) {
 }
 
 Value *DJId::codeGen(symbolTable ST, int type) {
-  if (ST.find(ID) == ST.end()) { // var is a class variable or static
+  Value *valToLoad = nullptr;
+  if (ST.find(ID) == ST.end()) {
+    // not found inthe local ST, so it must be global or a class variable.
     auto varInfo = varIsStaticInAnySuperClass(ID, staticClassNum);
-    if (varInfo.first) { // static var AKA global
+    if (varInfo.first) { // global variable.
       auto actualID = varInfo.second + "." + ID;
-      return Builder.CreateLoad(GlobalValues[actualID], ID);
-    }
-    if (staticClassNum > 0) {
-      // test if we're in a method
+      valToLoad = GlobalValues[actualID];
+    } else {
+      // if the variable isn't in the symbol table and it isn't a global
+      // variable, it must be a class variable. we use `this` to get at it.
       std::vector<Value *> elementIndex = {
           ConstantInt::get(TheContext, APInt(32, 0)),
           ConstantInt::get(TheContext,
                            APInt(32, getIndexOfRegularOrInheritedField(
                                          ID, staticClassNum)))};
-      return Builder.CreateLoad(
-          Builder.CreateGEP(Builder.CreateLoad(ST["this"]), elementIndex), ID);
+      valToLoad =
+          Builder.CreateGEP(Builder.CreateLoad(ST["this"]), elementIndex);
     }
+  } else {
+    valToLoad = ST[ID];
   }
-  return Builder.CreateLoad(ST[ID], ID);
+  return Builder.CreateLoad(valToLoad, ID);
 }
 
 Value *DJAssign::codeGen(symbolTable ST, int type) {
@@ -823,7 +826,6 @@ Value *DJDotId::codeGen(symbolTable ST, int type) {
         ConstantInt::get(TheContext, APInt(32, 0)),
         ConstantInt::get(
             TheContext,
-            /*add 1 to offset from the `this` pointer*/
             APInt(32, getIndexOfRegularOrInheritedField(ID, staticClassNum)))};
     auto I =
         GetElementPtrInst::Create(allocatedClasses[typeString(staticClassNum)],
