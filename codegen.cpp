@@ -71,6 +71,12 @@ std::vector<Value *> getGEPIndex(std::string variable, int classID) {
   return ret;
 }
 
+std::vector<Value *> getThisIndex() {
+  std::vector<Value *> ret = {ConstantInt::get(TheContext, APInt(32, 0)),
+                              ConstantInt::get(TheContext, APInt(32, 0))};
+  return ret;
+}
+
 std::vector<Type *> calculateInheritedStorageNeeds(
     int classNum, std::map<std::string, llvm::StructType *> &allocatedClasses) {
   // given a class ID, iterate inclusively from that class through all its
@@ -903,4 +909,20 @@ Value *DJDotMethodCall::codeGen(symbolTable ST, int type) {
 
 Value *DJThis::codeGen(symbolTable ST, int type) {
   return Builder.CreateLoad(ST["this"]);
+}
+
+Value *DJUndotMethodCall::codeGen(symbolTable ST, int type) {
+  auto className = std::string(typeString(staticClassNum));
+  auto LLMethodName = className + "_method_" + methodName;
+  symbolTable methodST = NamedValues[LLMethodName];
+  Function *TheMethod = TheModule->getFunction(LLMethodName);
+  std::vector<Value *> methodArgs = {Builder.CreateLoad(ST["this"])};
+  if (paramDeclaredType >= OBJECT_TYPE) {
+    methodArgs.push_back(
+        Builder.CreatePointerCast(methodParameter->codeGen(ST),
+                                  getLLVMTypeFromDJType(paramDeclaredType)));
+  } else {
+    methodArgs.push_back(methodParameter->codeGen(ST));
+  }
+  return Builder.CreateCall(TheMethod, methodArgs);
 }
