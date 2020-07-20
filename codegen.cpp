@@ -60,6 +60,16 @@ Type *getLLVMTypeFromDJType(int djType) {
   }
 }
 
+Type *getLLVMTypeFromDJType(std::string djType) {
+  if (djType == "bool") {
+    return Type::getInt1Ty(TheContext);
+  } else if (djType == "nat") {
+    return Type::getInt32Ty(TheContext);
+  } else {
+    return PointerType::getUnqual(allocatedClasses[djType]);
+  }
+}
+
 std::vector<Value *> getGEPIndex(std::string variable, int classID) {
   std::vector<Value *> ret = {
       ConstantInt::get(TheContext, APInt(32, 0)),
@@ -240,7 +250,7 @@ void emitVTable() {
   //  and still access fields, call methods with the same pointer, etc.
 
   // declare VTable data structures that will be used by this function and
-  // DJProgram methods.
+  // codegen methods of dot/undot method call expressions.
   std::map<std::string, std::vector<std::string>> thisOne;
   std::vector<std::string> empty;
   for (auto i : {"nat", "bool", "Object"}) {
