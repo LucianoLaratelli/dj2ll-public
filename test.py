@@ -9,26 +9,27 @@ from pygments.formatters import Terminal256Formatter as T256F
 
 ignore_list = [
     "good06.dj",
-    "good07.dj",
     "good08.dj",
     "good09.dj",
-    "good15.dj",
-    "good17.dj",
     "good19.dj",
     "good20.dj",
     "good21.dj",
     "good22.dj",
     "good30.dj",
     "good33.dj",
-    "goodMine1.dj",
 ]
+
+undotted_method_call = ["good07.dj", "good15.dj", "good17.dj", "goodMine1.dj"]
 
 
 def main():
-    pp = pprint.PrettyPrinter(indent=4)
-    files = sorted(
-        [f for f in os.listdir("test_programs/good") if f not in ignore_list]
-    )
+    if len(sys.argv) == 1:
+        # test all programs except those we know don't work yet
+        files = sorted(
+            [f for f in os.listdir("test_programs/good") if f not in ignore_list]
+        )
+    elif sys.argv[1] == "um":
+        files = undotted_method_call
     for file in files:
         fileName = f"test_programs/good/{file}"
         with open(fileName) as f:
