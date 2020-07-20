@@ -1,5 +1,5 @@
-#ifndef __TRANSLATEAST_H_
-#define __TRANSLATEAST_H_
+#ifndef TRANSLATEAST_H
+#define TRANSLATEAST_H
 /*functions that handle translation from ASTree type to a tree of DJNodes as
  * defined in llast.hpp/.cpp*/
 

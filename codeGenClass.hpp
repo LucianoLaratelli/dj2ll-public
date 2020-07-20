@@ -1,5 +1,5 @@
-#ifndef __CODEGENCLASS_HPP_
-#define __CODEGENCLASS_HPP_
+#ifndef CODEGENCLASS_HPP
+#define CODEGENCLASS_HPP
 
 #include "llvm_includes.hpp"
 #include "util.h"

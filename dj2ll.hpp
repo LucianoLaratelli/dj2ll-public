@@ -1,5 +1,5 @@
-#ifndef __DJ2LL_H_
-#define __DJ2LL_H_
+#ifndef DJ2LL_H
+#define DJ2LL_H
 
 #include "llast.hpp"
 #include "llvm_includes.hpp"

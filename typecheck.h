@@ -15,7 +15,7 @@ extern "C" {
    If this method finds a typing error, it reports the error and
    exits the compiler.
 */
-void typecheckProgram();
+void typecheckProgram(void);
 
 /* HELPER METHODS FOR typecheckProgram(): */
 

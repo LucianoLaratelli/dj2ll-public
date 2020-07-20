@@ -41,7 +41,7 @@ void dj2ll(std::map<std::string, bool> compilerFlags, std::string fileName,
   }
 
   yyin = fopen(fileName.c_str(), "r");
-  if (yyin == NULL) {
+  if (yyin == nullptr) {
     printf("ERROR: could not open file %s\n", fileName.c_str());
     exit(-1);
   }

@@ -4,13 +4,17 @@ all: dj2ll
 CC=clang
 CXX=clang++
 CFLAGS=-O2
-ANNOY=-pedantic
 DFLAGS=-ggdb3 -O0 -fstandalone-debug
-WFLAGS=-Wall -Wextra -Wno-unused-parameter -Wno-macro-redefined -Wunused-variable -Wunused-value -Wpointer-arith -Woverloaded-virtual -Werror=return-type		\
--Werror=int-to-pointer-cast -Wtype-limits -Wempty-body -Wsign-compare		\
--Wno-invalid-offsetof -Wno-c++0x-extensions -Wno-extended-offsetof			\
--Wno-unknown-warning-option -Wno-return-type-c-linkage -Wno-mismatched-tags	\
--Wno-error=uninitialized -Wno-error=deprecated-declarations -Wunused-variable -Wunused-value -Wunused\
+WFLAGS =	-Wno-c++98-compat\
+# 			-Wno-exit-time-destructors\
+# 			-Wno-global-constructors\
+# 			-Wno-shadow-field-in-constructor\
+# 			-Wno-weak-vtables\
+# 			-Wno-padded\
+# 			-Wno-sign-conversion\
+# 			-Wno-non-virtual-dtor\
+# 			-Wno-shadow\
+# 			-Weverything
 
 BISON=bison
 SED=sed
@@ -27,20 +31,26 @@ TESTMAIN=testMain.cpp
 OBJECTS=ast.o dj.tab.o symtbl.o typecheck.o typeErrors.o util.o
 
 dj2ll: lex.yy.c $(CSOURCES) $(CXXSOURCES)
-	$(CC)  $(CFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
-	$(CXX)  $(CFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs all` $(OBJECTS) $(CXXSOURCES) $(DJ2LLMAIN) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
+	$(CC)  $(CFLAGS) $(WFLAGS) -c $(CSOURCES)
+	$(CXX)  $(CFLAGS) $(WFLAGS) --std=c++11 $(OBJECTS) $(CXXSOURCES) $(DJ2LLMAIN) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
 
 debug: lex.yy.c $(CSOURCES) $(CXXSOURCES)
-	$(CC)  $(DFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
-	$(CXX)  $(DFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs all` $(OBJECTS) $(CXXSOURCES) $(DJ2LLMAIN) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
+	$(CC)  $(DFLAGS) $(WFLAGS) -c $(CSOURCES)
+	$(CXX)  $(DFLAGS) $(WFLAGS) --std=c++11  $(OBJECTS) $(CXXSOURCES) $(DJ2LLMAIN) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
 
 test: lex.yy.c $(CSOURCES) $(CXXSOURCES)
-	$(CC)  $(CFLAGS) $(WFLAGS) $(ANNOY) -c $(CSOURCES)
-	$(CXX)  $(CFLAGS) $(WFLAGS) $(ANNOY) --std=c++11 `llvm-config --cxxflags --ldflags --system-libs --libs all` $(OBJECTS) $(CXXSOURCES) $(TESTMAIN) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
+	$(CC)  $(CFLAGS) $(WFLAGS) -c $(CSOURCES)
+	$(CXX)  $(CFLAGS) $(WFLAGS) --std=c++11  $(OBJECTS) $(CXXSOURCES) $(TESTMAIN) `llvm-config --cxxflags --ldflags --system-libs --libs all` -o dj2ll
 
 dj.tab.c: dj.y
 	$(BISON) dj.y
 	$(SED) -i '/extern YYSTYPE yylval/d' dj.tab.c
+	echo "#pragma clang diagnostic push" > temp
+	echo "#pragma clang diagnostic ignored \"-Weverything\"" > temp
+	cat dj.tab.c >> temp
+	echo "#pragma clang diagnostic pop" >> temp
+	cat temp > dj.tab.c
+	rm temp
 
 lex.yy.c: dj.l
 	flex dj.l

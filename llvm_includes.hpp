@@ -1,7 +1,9 @@
-#ifndef __LLVM_INCLUDES_H_
-#define __LLVM_INCLUDES_H_
+#ifndef LLVM_INCLUDES_H
+#define LLVM_INCLUDES_H
 
 // llvm library includes, globals involving LLVM classes
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Weverything"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Optional.h"
@@ -30,6 +32,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Utils.h"
+#pragma clang diagnostic pop
 
 static llvm::LLVMContext TheContext;
 /*Builder keeps track of where we are in the IR and helps us generate

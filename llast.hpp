@@ -1,5 +1,5 @@
-#ifndef __LLAST_H_
-#define __LLAST_H_
+#ifndef LLAST_H
+#define LLAST_H
 #include "llvm_includes.hpp"
 #include "util.h"
 #include <vector>
@@ -18,7 +18,6 @@ typedef std::vector<DJExpression *> ExprList;
 
 class DJNode {
 public:
-  virtual ~DJNode() {}
   virtual llvm::Value *
   codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
           int type = -1) = 0;
@@ -209,7 +208,7 @@ public:
 class DJId : public DJExpression {
 public:
   std::string ID;
-  DJId(char *ID) : ID(ID){};
+  DJId(char *ID) : ID(ID) {}
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
@@ -253,7 +252,7 @@ public:
   DJExpression *objectLike;
   std::string ID;
   DJDotId(DJExpression *objectLike, char *ID)
-      : objectLike(objectLike), ID(ID){};
+      : objectLike(objectLike), ID(ID) {}
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
@@ -266,7 +265,7 @@ public:
   std::string ID;
   DJExpression *assignVal;
   DJDotAssign(DJExpression *objectLike, char *ID, DJExpression *assignVal)
-      : objectLike(objectLike), ID(ID), assignVal(assignVal){};
+      : objectLike(objectLike), ID(ID), assignVal(assignVal) {}
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
@@ -278,7 +277,7 @@ public:
   DJExpression *objectLike;
   int classID;
   DJInstanceOf(DJExpression *objectLike, int classID)
-      : objectLike(objectLike), classID(classID){};
+      : objectLike(objectLike), classID(classID) {}
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
@@ -297,7 +296,7 @@ public:
                   int paramDeclaredType)
       : objectLike(objectLike), methodName(methodName),
         methodParameter(methodParameter), paramName(paramName),
-        paramDeclaredType(paramDeclaredType){};
+        paramDeclaredType(paramDeclaredType) {}
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
@@ -306,7 +305,7 @@ public:
 
 class DJThis : public DJExpression {
 public:
-  // DJThis() : {};
+  // DJThis() : {}
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValue,
                        int type = -1) override;
   void print(int offset = 0) override;
@@ -322,7 +321,7 @@ public:
   DJUndotMethodCall(std::string methodName, DJExpression *methodParameter,
                     std::string paramName, int paramDeclaredType)
       : methodName(methodName), methodParameter(methodParameter),
-        paramName(paramName), paramDeclaredType(paramDeclaredType){};
+        paramName(paramName), paramDeclaredType(paramDeclaredType) {}
   llvm::Value *codeGen(std::map<std::string, llvm::AllocaInst *> NamedValues,
                        int type = -1) override;
   void print(int offset = 0) override;
