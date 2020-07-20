@@ -50,15 +50,12 @@ Type *getLLVMTypeFromDJType(int djType) {
   switch (djType) {
   case TYPE_BOOL: {
     return Type::getInt1Ty(TheContext);
-    break;
   }
   case TYPE_NAT: {
     return Type::getInt32Ty(TheContext);
-    break;
   }
   default: {
     return PointerType::getUnqual(allocatedClasses[typeString(djType)]);
-    break;
   }
   }
 }
@@ -215,6 +212,66 @@ void emitITable() {
   Builder.CreateRet(ConstantInt::get(TheContext, APInt(1, 0)));
 }
 
+std::map<std::string, std::map<std::string, std::vector<std::string>>> VTable;
+std::vector<std::string> availableVTables;
+
+void emitVTable() {
+  // generate the virtual method call table. this method generates nine
+  // different functions, which act as the jump tables.
+
+  // nat natVTablenat();
+  // nat natVTablebool();
+  // nat natVTableObject();
+  // bool boolVTablenat();
+  // bool boolVTablebool();
+  // bool boolVTableObject();
+  // Object ObjectVTablenat();
+  // Object ObjectVTablebool();
+  // Object ObjectVTableObject();
+
+  //  These will be called selectively from undot and dot method call. I opted
+  //  to implement the VTable in this manner because of the LLVM IR type system,
+  //  which will give many warnings for return type mismatch, parameter
+  //  mismatch, etc. This made something like the ITable undesirable, because we
+  //  would have methods that return nat, Object, and bool all as the return
+  //  value of some master VTable function. You might ask how I'm gettng away
+  //  with having all Object functions / parameters. well, I'm just bitcasting
+  //  everywhere. I tested that we can freely bitcast a class to and from Object
+  //  and still access fields, call methods with the same pointer, etc.
+
+  // declare VTable data structures that will be used by this function and
+  // DJProgram methods.
+  std::map<std::string, std::vector<std::string>> thisOne;
+  std::vector<std::string> empty;
+  for (auto i : {"nat", "bool", "Object"}) {
+    for (auto j : {"nat", "bool", "Object"}) {
+      thisOne[j] = empty;
+      availableVTables.push_back(i + std::string("VTable") + j);
+    }
+    VTable[i] = thisOne;
+    thisOne.clear();
+  }
+
+  for (int i = 0; i < numClasses; i++) {
+    auto thisClass = classesST[i];
+    std::string className = thisClass.className;
+    for (int j = 0; j < thisClass.numMethods; j++) {
+      auto method = thisClass.methodList[j];
+      std::string methodName = method.methodName;
+      std::string retTypeStr = typeString(method.returnType);
+      std::string paramTyStr = typeString(method.paramType);
+      if (method.returnType > OBJECT_TYPE) {
+        retTypeStr = "Object";
+      }
+      if (method.paramType > OBJECT_TYPE) {
+        paramTyStr = "Object";
+      }
+      auto LLMethodName = className + "_method_" + methodName;
+      VTable[retTypeStr][paramTyStr].push_back(LLMethodName);
+    }
+  }
+}
+
 void generateMethodST(int classNum, int methodNum, int inheritedFrom = 0) {
   // generate symbol tables of LLVM types from the old symbol tables generated
   // in symbtbl.c for the requested method.
@@ -271,6 +328,7 @@ void generateMethodST(int classNum, int methodNum, int inheritedFrom = 0) {
 }
 
 Function *DJProgram::codeGen(symbolTable ST, int type) {
+  emitVTable();
   TheModule = std::make_unique<Module>(inputFile, TheContext);
 
   if (hasPrintNat || hasReadNat) {
@@ -314,14 +372,14 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
       case TYPE_NAT:
         GlobalValues[name] = new GlobalVariable(
             *TheModule.get(), Type::getInt32Ty(TheContext), false,
-            llvm::GlobalValue::LinkageTypes::CommonLinkage, 0, name);
+            llvm::GlobalValue::LinkageTypes::CommonLinkage, nullptr, name);
         GlobalValues[name]->setInitializer(
             ConstantInt::get(TheContext, APInt(32, 0)));
         break;
       case TYPE_BOOL:
         GlobalValues[name] = new GlobalVariable(
             *TheModule.get(), Type::getInt1Ty(TheContext), false,
-            llvm::GlobalValue::LinkageTypes::CommonLinkage, 0, name);
+            llvm::GlobalValue::LinkageTypes::CommonLinkage, nullptr, name);
         GlobalValues[name]->setInitializer(
             ConstantInt::get(TheContext, APInt(1, 0)));
         break;
@@ -329,7 +387,7 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
         GlobalValues[name] = new GlobalVariable(
             *TheModule.get(),
             PointerType::getUnqual(allocatedClasses[declaredClass]), false,
-            GlobalValue::LinkageTypes::ExternalLinkage, 0, name);
+            GlobalValue::LinkageTypes::ExternalLinkage, nullptr, name);
       }
     }
   }
@@ -715,6 +773,7 @@ Value *DJFor::codeGen(symbolTable ST, int type) {
 }
 
 Value *DJId::codeGen(symbolTable ST, int type) {
+  // TODO:staticClassNum is wrong here
   Value *valToLoad = nullptr;
   if (ST.find(ID) == ST.end()) {
     // not found inthe local ST, so it must be global or a class variable.
