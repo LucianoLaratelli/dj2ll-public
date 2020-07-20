@@ -19,7 +19,6 @@ extern "C" {
 
 // colors for pretty-printing error messages
 // just having a little fun!
-/*TODO RENAME THESE, LLVM FAILLING*/
 #define LRESET "\033[0m"
 #define LRED "\033[31m"
 #define LGREEN "\033[32m"
