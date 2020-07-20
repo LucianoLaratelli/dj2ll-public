@@ -5,16 +5,16 @@ CC=clang
 CXX=clang++
 CFLAGS=-O2
 DFLAGS=-ggdb3 -O0 -fstandalone-debug
-WFLAGS =	-Wno-c++98-compat\
-# 			-Wno-exit-time-destructors\
-# 			-Wno-global-constructors\
-# 			-Wno-shadow-field-in-constructor\
-# 			-Wno-weak-vtables\
-# 			-Wno-padded\
-# 			-Wno-sign-conversion\
-# 			-Wno-non-virtual-dtor\
-# 			-Wno-shadow\
-# 			-Weverything
+WFLAGS =    -Weverything                        \
+			-Wno-exit-time-destructors          \
+			-Wno-global-constructors            \
+			-Wno-non-virtual-dtor               \
+			-Wno-padded                         \
+			-Wno-shadow-field-in-constructor    \
+			-Wno-shadow                         \
+			-Wno-sign-conversion                \
+			-Wno-weak-vtables                   \
+			-Wno-c++98-compat                   \
 
 BISON=bison
 SED=sed
