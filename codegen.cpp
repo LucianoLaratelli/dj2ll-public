@@ -222,7 +222,14 @@ void emitITable() {
   Builder.CreateRet(ConstantInt::get(TheContext, APInt(1, 0)));
 }
 
-std::map<std::string, std::map<std::string, std::vector<std::string>>> VTable;
+typedef int classID;
+typedef int methodNum;
+std::map<std::string,
+         std::map<std::string,
+                  std::vector<std::tuple<std::string, classID, methodNum>>>>
+    VTable;
+// std::map<std::string, std::map<std::string, std::vector<std::string>>>
+// VTable;
 std::vector<std::string> availableVTables;
 
 void emitVTable() {
@@ -251,8 +258,10 @@ void emitVTable() {
 
   // declare VTable data structures that will be used by this function and
   // codegen methods of dot/undot method call expressions.
-  std::map<std::string, std::vector<std::string>> thisOne;
-  std::vector<std::string> empty;
+  std::map<std::string,
+           std::vector<std::tuple<std::string, classID, methodNum>>>
+      thisOne;
+  std::vector<std::tuple<std::string, classID, methodNum>> empty;
   for (auto i : {"nat", "bool", "Object"}) {
     for (auto j : {"nat", "bool", "Object"}) {
       thisOne[j] = empty;
@@ -277,7 +286,41 @@ void emitVTable() {
         paramTyStr = "Object";
       }
       auto LLMethodName = className + "_method_" + methodName;
-      VTable[retTypeStr][paramTyStr].push_back(LLMethodName);
+      VTable[retTypeStr][paramTyStr].push_back(
+          std::make_tuple(LLMethodName, i, j));
+    }
+  }
+
+  // at this point we have a mapping of return type to parameter type to the
+  // method name as is stored in NamedValues. Now we need to generate the nine
+  // VTable functions as above.
+  std::vector<Type *> functionArgs;
+  llvm::FunctionType *methodType;
+  for (const auto &[returnType, params] : VTable) {
+    for (const auto &[paramType, methods] : params) {
+      functionArgs = {PointerType::getUnqual(allocatedClasses["Object"]),
+                      getLLVMTypeFromDJType(paramType)};
+      methodType = FunctionType::get(getLLVMTypeFromDJType(returnType),
+                                     functionArgs, false);
+      Builder.SetInsertPoint(createBB(
+          Function::Create(methodType, llvm::Function::ExternalLinkage,
+                           returnType + "VTable" + paramType, TheModule.get()),
+          "entry"));
+      // TODO: get `this` set up as in further method declarations
+
+      // TODO: check for value of ID
+
+      // TODO: need to store which methods can be virtually called, maybe using
+      // getDynamicMethodInfo from the old DISM codegen routines. those stored
+      // methods will be referenced here
+
+      // TODO: maybe need to pass in static method number to vtable functions?
+      for (const auto &m : methods) {
+        // TODO: once we have the data structure that stores which methods can
+        // come from which static class, we need to call them here in a chain of
+        // if-statements as in the ITable I guess we could use a tuple of
+        // LLMethodName, staticClassID, and staticMethodID to determine this?
+      }
     }
   }
 }
