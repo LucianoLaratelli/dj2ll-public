@@ -16,4 +16,9 @@ int getIndexOfRegularField(std::string desired, int classIndex);
 
 int getIndexOfRegularOrInheritedField(std::string ID, int classNum);
 
+typedef int classID;
+typedef int methodNum;
+std::pair<classID, methodNum>
+getDynamicMethodInfo(int staticClass, int staticMethod, int dynamicType);
+
 #endif // __CODEGENCLASS_HPP_

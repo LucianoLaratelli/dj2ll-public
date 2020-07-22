@@ -297,13 +297,15 @@ void emitVTable() {
   std::vector<Type *> functionArgs;
   llvm::FunctionType *methodType;
   for (const auto &[returnType, params] : VTable) {
-    for (const auto &[paramType, methods] : params) {
+    std::cout << returnType << "\n";
+    for (const auto &[paramType, methodInformation] : params) {
+      std::cout << FOURSPACES << paramType << "\n";
       functionArgs = {PointerType::getUnqual(allocatedClasses["Object"]),
                       getLLVMTypeFromDJType(paramType)};
       methodType = FunctionType::get(getLLVMTypeFromDJType(returnType),
                                      functionArgs, false);
       Builder.SetInsertPoint(createBB(
-          Function::Create(methodType, llvm::Function::ExternalLinkage,
+          Function::Create(methodType, Function::ExternalLinkage,
                            returnType + "VTable" + paramType, TheModule.get()),
           "entry"));
       // TODO: get `this` set up as in further method declarations
@@ -315,12 +317,41 @@ void emitVTable() {
       // methods will be referenced here
 
       // TODO: maybe need to pass in static method number to vtable functions?
-      for (const auto &m : methods) {
+      for (const auto &[methodName, staticClass, staticMethodNum] :
+           methodInformation) {
+        std::cout << EIGHTSPACES << methodName << " " << staticClass << " "
+                  << staticMethodNum << "\n";
+        for (int i = 1; i < numClasses; i++) {
+          // iterating through every class, we check to see if the current class
+          // is a subtype of the class which declares the method we are
+          // examining at the moment. if it is, we'll emit a call to the
+          // appropriate function. if it isn't, for completeness, we'll emit a
+          // null return, which will crash the program when the caller receives
+          // it.
+          if (isSubtype(i, staticClass)) {
+            auto [dynamicClass, dynamicMethod] =
+                getDynamicMethodInfo(staticClass, staticMethodNum, i);
+            std::cout << staticClass << " " << staticMethodNum << " " << i
+                      << " " << dynamicClass << " " << dynamicMethod << "\n";
+            // get dynamic class from first argument of the current parent
+            // vtable function
+            if (paramType == "Object") {
+              // do bitcast to this type, the declared parameter type
+              auto declType =
+                  classesST[staticClass].methodList[staticMethodNum].paramType;
+            }
+          } else {
+            Builder.CreateRet(
+                Constant::getNullValue(getLLVMTypeFromDJType(returnType)));
+          }
+        }
         // TODO: once we have the data structure that stores which methods can
         // come from which static class, we need to call them here in a chain of
         // if-statements as in the ITable I guess we could use a tuple of
         // LLMethodName, staticClassID, and staticMethodID to determine this?
       }
+      Builder.CreateRet(
+          Constant::getNullValue(getLLVMTypeFromDJType(returnType)));
     }
   }
 }
@@ -381,7 +412,6 @@ void generateMethodST(int classNum, int methodNum, int inheritedFrom = 0) {
 }
 
 Function *DJProgram::codeGen(symbolTable ST, int type) {
-  emitVTable();
   TheModule = std::make_unique<Module>(inputFile, TheContext);
 
   if (hasPrintNat || hasReadNat) {
@@ -527,6 +557,7 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
       superClass = classesST[superClass].superclass;
     }
   }
+  emitVTable();
   /*begin codegen for `main`*/
   Function *DJmain = createFunc(Builder, "main");
   BasicBlock *entry = createBB(DJmain, "entry");
