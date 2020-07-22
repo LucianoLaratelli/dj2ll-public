@@ -84,6 +84,12 @@ std::vector<Value *> getThisIndex() {
   return ret;
 }
 
+std::vector<Value *> getGEPID() {
+  std::vector<Value *> ret = {ConstantInt::get(TheContext, APInt(32, 0)),
+                              ConstantInt::get(TheContext, APInt(32, 1))};
+  return ret;
+}
+
 std::vector<Type *> calculateInheritedStorageNeeds(
     int classNum, std::map<std::string, llvm::StructType *> &allocatedClasses) {
   // given a class ID, iterate inclusively from that class through all its
@@ -228,13 +234,14 @@ std::map<std::string,
          std::map<std::string,
                   std::vector<std::tuple<std::string, classID, methodNum>>>>
     VTable;
-// std::map<std::string, std::map<std::string, std::vector<std::string>>>
-// VTable;
 std::vector<std::string> availableVTables;
 
 void emitVTable() {
   // generate the virtual method call table. this method generates nine
-  // different functions, which act as the jump tables.
+  // different functions, which act as the jump tables. each VTable functions
+  // takes three arguments: the original `this` pointer, the static type of the
+  // caller, and the original parameter. the `this` pointer contains the dynamic
+  // type.
 
   // nat natVTablenat();
   // nat natVTablebool();
@@ -254,7 +261,7 @@ void emitVTable() {
   //  value of some master VTable function. You might ask how I'm gettng away
   //  with having all Object functions / parameters. well, I'm just bitcasting
   //  everywhere. I tested that we can freely bitcast a class to and from Object
-  //  and still access fields, call methods with the same pointer, etc.
+  //  and then still access fields, call methods with the same pointer, etc.
 
   // declare VTable data structures that will be used by this function and
   // codegen methods of dot/undot method call expressions.
@@ -301,6 +308,7 @@ void emitVTable() {
     for (const auto &[paramType, methodInformation] : params) {
       std::cout << FOURSPACES << paramType << "\n";
       functionArgs = {PointerType::getUnqual(allocatedClasses["Object"]),
+                      getLLVMTypeFromDJType("nat"), /*it's just an int*/
                       getLLVMTypeFromDJType(paramType)};
       methodType = FunctionType::get(getLLVMTypeFromDJType(returnType),
                                      functionArgs, false);
@@ -308,15 +316,6 @@ void emitVTable() {
           Function::Create(methodType, Function::ExternalLinkage,
                            returnType + "VTable" + paramType, TheModule.get());
       Builder.SetInsertPoint(createBB(method, "entry"));
-      // TODO: get `this` set up as in further method declarations
-
-      // TODO: check for value of ID
-
-      // TODO: need to store which methods can be virtually called, maybe using
-      // getDynamicMethodInfo from the old DISM codegen routines. those stored
-      // methods will be referenced here
-
-      // TODO: maybe need to pass in static method number to vtable functions?
       for (const auto &[methodName, staticClass, staticMethodNum] :
            methodInformation) {
         std::cout << EIGHTSPACES << methodName << " " << staticClass << " "
@@ -325,24 +324,25 @@ void emitVTable() {
           // iterating through every class, we check to see if the current class
           // is a subtype of the class which declares the method we are
           // examining at the moment. if it is, we'll emit a call to the
-          // appropriate function. if it isn't, for completeness, we'll emit a
-          // null return, which will crash the program when the caller receives
-          // it.
+          // appropriate function.
           if (isSubtype(i, staticClass)) {
             auto [dynamicClass, dynamicMethod] =
                 getDynamicMethodInfo(staticClass, staticMethodNum, i);
             std::cout << staticClass << " " << staticMethodNum << " " << i
                       << " " << dynamicClass << " " << dynamicMethod << "\n";
-            // get dynamic class from first argument of the current parent
-            // vtable function
-            auto arg = method->getArg(0);
-            // need static type and dynamic type
-            // static type is i, dynamic type is the value of ID at arg
+            Value *originalThis = method->getArg(0);
+            auto methodStaticClass = method->getArg(1);
+            Value *originalParam = method->getArg(2);
             auto condValue = Builder.CreateAnd(
+                // compare static class (passed in by caller)
                 Builder.CreateICmpEQ(
-                    aClass, ConstantInt::get(TheContext, APInt(32, i))),
+                    methodStaticClass,
+                    ConstantInt::get(TheContext, APInt(32, i))),
                 Builder.CreateICmpEQ(
-                    bClass, ConstantInt::get(TheContext, APInt(32, j))));
+                    // load dynamic class type from `this`
+                    Builder.CreateLoad(
+                        Builder.CreateGEP(originalThis, getGEPID())),
+                    ConstantInt::get(TheContext, APInt(32, dynamicClass))));
             Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
             BasicBlock *ThenBB =
@@ -350,33 +350,35 @@ void emitVTable() {
             BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
 
             Builder.CreateCondBr(condValue, ThenBB, ElseBB);
-            // emit then value
             Builder.SetInsertPoint(ThenBB);
+            // bitcast `this` to the type of the original caller
+            originalThis = Builder.CreatePointerBitCastOrAddrSpaceCast(
+                originalThis, getLLVMTypeFromDJType(staticClass));
             if (paramType == "Object") {
-              // do bitcast to this type, the declared parameter type
-              auto declType =
-                  classesST[staticClass].methodList[staticMethodNum].paramType;
-              Builder.CreatePointerBitCastOrAddrSpaceCast(
-                  arg, getLLVMTypeFromDJType(declType));
+              // bitcast parameter type to correct type
+              originalParam = Builder.CreatePointerBitCastOrAddrSpaceCast(
+                  originalParam,
+                  getLLVMTypeFromDJType(classesST[staticClass]
+                                            .methodList[staticMethodNum]
+                                            .paramType));
             }
-            std::vector<Value *> methodArgs = {arg, method->getArg(1)};
-            Builder.CreateRet(Builder.CreatePointerBitCastOrAddrSpaceCast(
-                Builder.CreateCall(TheModule->getFunction(methodName),
-                                   methodArgs),
-                getLLVMTypeFromDJType("Object")));
+            std::vector<Value *> methodArgs = {originalThis, originalParam};
+            Value *ret = Builder.CreateCall(TheModule->getFunction(methodName),
+                                            methodArgs);
+            if (returnType == "Object") {
+              // adjust return type
+              ret = Builder.CreatePointerBitCastOrAddrSpaceCast(
+                  ret, getLLVMTypeFromDJType(classesST[staticClass]
+                                                 .methodList[staticMethodNum]
+                                                 .returnType));
+            }
+            Builder.CreateRet(ret);
 
             ThenBB = Builder.GetInsertBlock();
             TheFunction->getBasicBlockList().push_back(ElseBB);
             Builder.SetInsertPoint(ElseBB);
-          } else {
-            Builder.CreateRet(
-                Constant::getNullValue(getLLVMTypeFromDJType(returnType)));
           }
         }
-        // TODO: once we have the data structure that stores which methods can
-        // come from which static class, we need to call them here in a chain of
-        // if-statements as in the ITable I guess we could use a tuple of
-        // LLMethodName, staticClassID, and staticMethodID to determine this?
       }
       Builder.CreateRet(
           Constant::getNullValue(getLLVMTypeFromDJType(returnType)));
