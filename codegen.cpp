@@ -304,10 +304,10 @@ void emitVTable() {
                       getLLVMTypeFromDJType(paramType)};
       methodType = FunctionType::get(getLLVMTypeFromDJType(returnType),
                                      functionArgs, false);
-      Builder.SetInsertPoint(createBB(
+      auto method =
           Function::Create(methodType, Function::ExternalLinkage,
-                           returnType + "VTable" + paramType, TheModule.get()),
-          "entry"));
+                           returnType + "VTable" + paramType, TheModule.get());
+      Builder.SetInsertPoint(createBB(method, "entry"));
       // TODO: get `this` set up as in further method declarations
 
       // TODO: check for value of ID
@@ -335,11 +335,39 @@ void emitVTable() {
                       << " " << dynamicClass << " " << dynamicMethod << "\n";
             // get dynamic class from first argument of the current parent
             // vtable function
+            auto arg = method->getArg(0);
+            // need static type and dynamic type
+            // static type is i, dynamic type is the value of ID at arg
+            auto condValue = Builder.CreateAnd(
+                Builder.CreateICmpEQ(
+                    aClass, ConstantInt::get(TheContext, APInt(32, i))),
+                Builder.CreateICmpEQ(
+                    bClass, ConstantInt::get(TheContext, APInt(32, j))));
+            Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+            BasicBlock *ThenBB =
+                BasicBlock::Create(TheContext, "then", TheFunction);
+            BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+
+            Builder.CreateCondBr(condValue, ThenBB, ElseBB);
+            // emit then value
+            Builder.SetInsertPoint(ThenBB);
             if (paramType == "Object") {
               // do bitcast to this type, the declared parameter type
               auto declType =
                   classesST[staticClass].methodList[staticMethodNum].paramType;
+              Builder.CreatePointerBitCastOrAddrSpaceCast(
+                  arg, getLLVMTypeFromDJType(declType));
             }
+            std::vector<Value *> methodArgs = {arg, method->getArg(1)};
+            Builder.CreateRet(Builder.CreatePointerBitCastOrAddrSpaceCast(
+                Builder.CreateCall(TheModule->getFunction(methodName),
+                                   methodArgs),
+                getLLVMTypeFromDJType("Object")));
+
+            ThenBB = Builder.GetInsertBlock();
+            TheFunction->getBasicBlockList().push_back(ElseBB);
+            Builder.SetInsertPoint(ElseBB);
           } else {
             Builder.CreateRet(
                 Constant::getNullValue(getLLVMTypeFromDJType(returnType)));
