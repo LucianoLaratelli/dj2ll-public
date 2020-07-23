@@ -69,7 +69,7 @@ int getIndexOfRegularOrInheritedField(std::string ID, int classNum) {
 typedef int classID;
 typedef int methodNum;
 std::pair<classID, methodNum>
-getDynamicMethodInfo(int staticClass, int staticMethod, int dynamicType) {
+getDynamicMethodInfo(int staticClass, int dynamicType, int staticMethod) {
   int i = 0;
   ClassDecl dynClass = classesST[dynamicType];
   char *lookingFor = classesST[staticClass].methodList[staticMethod].methodName;
