@@ -7,19 +7,11 @@ from pygments import highlight
 from pygments.lexers import JavaLexer
 from pygments.formatters import Terminal256Formatter as T256F
 
-ignore_list = [
-    "good06.dj",
-    "good08.dj",
-    "good09.dj",
-    "good19.dj",
-    "good20.dj",
-    "good21.dj",
-    "good22.dj",
-    "good30.dj",
-    "good33.dj",
-]
+ignore_list = ["good06.dj", "good20.dj", "good21.dj", "good22.dj", "good30.dj"]
 
 undotted_method_call = ["good07.dj", "good15.dj", "good17.dj", "goodMine1.dj"]
+
+vtable = ["good08.dj", "good09.dj", "good19.dj", "good33.dj"]
 
 
 def main():
@@ -30,6 +22,8 @@ def main():
         )
     elif sys.argv[1] == "um":
         files = undotted_method_call
+    elif sys.argv[1] == "vt":
+        files = vtable
     for file in files:
         fileName = f"test_programs/good/{file}"
         with open(fileName) as f:

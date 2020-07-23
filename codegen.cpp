@@ -50,16 +50,23 @@ Type *getLLVMTypeFromDJType(int djType) {
   switch (djType) {
   case TYPE_BOOL: {
     return Type::getInt1Ty(TheContext);
-    break;
   }
   case TYPE_NAT: {
     return Type::getInt32Ty(TheContext);
-    break;
   }
   default: {
     return PointerType::getUnqual(allocatedClasses[typeString(djType)]);
-    break;
   }
+  }
+}
+
+Type *getLLVMTypeFromDJType(std::string djType) {
+  if (djType == "bool") {
+    return Type::getInt1Ty(TheContext);
+  } else if (djType == "nat") {
+    return Type::getInt32Ty(TheContext);
+  } else {
+    return PointerType::getUnqual(allocatedClasses[djType]);
   }
 }
 
@@ -74,6 +81,12 @@ std::vector<Value *> getGEPIndex(std::string variable, int classID) {
 std::vector<Value *> getThisIndex() {
   std::vector<Value *> ret = {ConstantInt::get(TheContext, APInt(32, 0)),
                               ConstantInt::get(TheContext, APInt(32, 0))};
+  return ret;
+}
+
+std::vector<Value *> getGEPID() {
+  std::vector<Value *> ret = {ConstantInt::get(TheContext, APInt(32, 0)),
+                              ConstantInt::get(TheContext, APInt(32, 1))};
   return ret;
 }
 
@@ -215,6 +228,131 @@ void emitITable() {
   Builder.CreateRet(ConstantInt::get(TheContext, APInt(1, 0)));
 }
 
+void emitVTable() {
+  // generate the virtual method call table, implemented as nine different
+  // functions, which together act as the jump tables. each VTable function
+  // takes four arguments: the original `this` pointer, the static type of the
+  // caller, the static method number of the caller and the original parameter.
+  // the `this` pointer contains the dynamic type. the nine functions are:
+
+  // nat natVTablenat();
+  // nat natVTablebool();
+  // nat natVTableObject();
+  // bool boolVTablenat();
+  // bool boolVTablebool();
+  // bool boolVTableObject();
+  // Object ObjectVTablenat();
+  // Object ObjectVTablebool();
+  // Object ObjectVTableObject();
+
+  //  These will be called selectively from undot and dot method call. I opted
+  //  to implement the VTable in this manner because of the LLVM IR type system,
+  //  which will give many warnings for return type mismatch, parameter
+  //  mismatch, etc. This made something like the ITable undesirable, because we
+  //  would have methods that return nat, Object, and bool all as the return
+  //  value of some master VTable function. You might ask how I'm gettng away
+  //  with having all Object functions / parameters. well, I'm just bitcasting
+  //  everywhere. I tested that we can freely bitcast a class to and from Object
+  //  and then still access fields, call methods with the same pointer, etc.
+
+  std::vector<Type *> functionArgs = {
+      PointerType::getUnqual(allocatedClasses["Object"]),
+      getLLVMTypeFromDJType("nat"), /*it's just an int*/
+      getLLVMTypeFromDJType("nat"), /*it's just an int*/
+      getLLVMTypeFromDJType(0)};
+  llvm::FunctionType *VTableType;
+  Function *VTableFunc;
+  for (const std::string &returnType : {"nat", "bool", "Object"}) {
+    for (const std::string &paramType : {"nat", "bool", "Object"}) {
+      functionArgs[3] = getLLVMTypeFromDJType(paramType);
+      VTableType = FunctionType::get(getLLVMTypeFromDJType(returnType),
+                                     functionArgs, false);
+      VTableFunc =
+          Function::Create(VTableType, Function::ExternalLinkage,
+                           returnType + "VTable" + paramType, TheModule.get());
+      Builder.SetInsertPoint(createBB(VTableFunc, "entry"));
+      Value *originalThis = VTableFunc->getArg(0);
+      Value *staticType = VTableFunc->getArg(1);
+      Value *staticMethod = VTableFunc->getArg(2);
+      Value *originalParam = VTableFunc->getArg(3);
+      for (int i = 1; i < numClasses; i++) {                  // static class
+        for (int j = 1; j < numClasses; j++) {                // dynamic class
+          for (int k = 0; k < classesST[i].numMethods; k++) { // static method
+            auto MST = classesST[i].methodList[k];
+            if (isSubtype(j, i)) {
+              // we can check MST instead of DMST here because subclasses that
+              // override their parents' classes methods are guaranteed to have
+              // the same return type and parameter.
+              if (methodTypeMatchesVTable(MST.returnType, MST.paramType,
+                                          returnType, paramType)) {
+                // get Dynamic Class and Dynamic Method IDs
+                const auto &[DC, DM] = getDynamicMethodInfo(i, j, k);
+                // dynamic method symbol table
+                auto DMST = classesST[DC].methodList[DM];
+                if (DMST.paramType >= OBJECT_TYPE) {
+                  originalParam = Builder.CreatePointerBitCastOrAddrSpaceCast(
+                      originalParam, getLLVMTypeFromDJType(DMST.paramType));
+                }
+                originalThis = Builder.CreatePointerCast(
+                    originalThis, getLLVMTypeFromDJType(DC));
+                std::string dynamicClassName = typeString(DC);
+                std::string dynamicMethodName =
+                    classesST[DC].methodList[DM].methodName;
+                auto actualMethodName =
+                    dynamicClassName + "_method_" + dynamicMethodName;
+                std::vector<Value *> actualArgs = {originalThis, originalParam};
+
+                auto incomingDynamicType = Builder.CreateLoad(
+                    Builder.CreateGEP(originalThis, getGEPID()));
+
+                // check for static class and dynamic class
+                auto condValue = Builder.CreateAnd(
+                    Builder.CreateICmpEQ(
+                        staticType, ConstantInt::get(TheContext, APInt(32, i))),
+                    Builder.CreateICmpEQ(
+                        incomingDynamicType,
+                        ConstantInt::get(TheContext, APInt(32, j))));
+                // check for static method
+                condValue = Builder.CreateAnd(
+                    condValue, Builder.CreateICmpEQ(
+                                   staticMethod,
+                                   ConstantInt::get(TheContext, APInt(32, k))));
+                // begin chained if-then-else
+                Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+                BasicBlock *ThenBB =
+                    BasicBlock::Create(TheContext, "then", TheFunction);
+                BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+
+                Builder.CreateCondBr(condValue, ThenBB, ElseBB);
+                // emit then value
+                Builder.SetInsertPoint(ThenBB);
+
+                // emit call to a variable so we can cast it if necessary
+                // (remember, all the struct vtables are returning Object)
+                Value *ret = Builder.CreateCall(
+                    TheModule->getFunction(actualMethodName), actualArgs);
+                if (returnType == "Object") {
+                  ret = Builder.CreatePointerCast(
+                      ret, getLLVMTypeFromDJType(MST.returnType));
+                }
+                Builder.CreateRet(ret);
+
+                ThenBB = Builder.GetInsertBlock();
+                TheFunction->getBasicBlockList().push_back(ElseBB);
+                Builder.SetInsertPoint(ElseBB);
+              }
+            }
+          }
+        }
+      }
+      // emit return value for last `else`
+      Builder.CreateRet(
+          Constant::getNullValue(getLLVMTypeFromDJType(returnType)));
+    }
+  }
+}
+
 void generateMethodST(int classNum, int methodNum, int inheritedFrom = 0) {
   // generate symbol tables of LLVM types from the old symbol tables generated
   // in symbtbl.c for the requested method.
@@ -314,14 +452,14 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
       case TYPE_NAT:
         GlobalValues[name] = new GlobalVariable(
             *TheModule.get(), Type::getInt32Ty(TheContext), false,
-            llvm::GlobalValue::LinkageTypes::CommonLinkage, 0, name);
+            llvm::GlobalValue::LinkageTypes::CommonLinkage, nullptr, name);
         GlobalValues[name]->setInitializer(
             ConstantInt::get(TheContext, APInt(32, 0)));
         break;
       case TYPE_BOOL:
         GlobalValues[name] = new GlobalVariable(
             *TheModule.get(), Type::getInt1Ty(TheContext), false,
-            llvm::GlobalValue::LinkageTypes::CommonLinkage, 0, name);
+            llvm::GlobalValue::LinkageTypes::CommonLinkage, nullptr, name);
         GlobalValues[name]->setInitializer(
             ConstantInt::get(TheContext, APInt(1, 0)));
         break;
@@ -329,7 +467,7 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
         GlobalValues[name] = new GlobalVariable(
             *TheModule.get(),
             PointerType::getUnqual(allocatedClasses[declaredClass]), false,
-            GlobalValue::LinkageTypes::ExternalLinkage, 0, name);
+            GlobalValue::LinkageTypes::ExternalLinkage, nullptr, name);
       }
     }
   }
@@ -371,6 +509,7 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
       superClass = classesST[superClass].superclass;
     }
   }
+  emitVTable();
   // define methods declared in this class
   for (int i = 0; i < numClasses; i++) {
     auto declaredClass = std::string(classesST[i].className);
@@ -715,6 +854,7 @@ Value *DJFor::codeGen(symbolTable ST, int type) {
 }
 
 Value *DJId::codeGen(symbolTable ST, int type) {
+  // TODO:staticClassNum is wrong here
   Value *valToLoad = nullptr;
   if (ST.find(ID) == ST.end()) {
     // not found inthe local ST, so it must be global or a class variable.
@@ -894,17 +1034,37 @@ Value *DJDotMethodCall::codeGen(symbolTable ST, int type) {
   auto className = std::string(typeString(staticClassNum));
   auto LLMethodName = className + "_method_" + methodName;
   symbolTable methodST = NamedValues[LLMethodName];
-  symbolTable classST = NamedValues[className];
-  Function *TheMethod = TheModule->getFunction(LLMethodName);
-  std::vector<Value *> methodArgs = {objectLike->codeGen(ST)};
+  std::vector<Value *> methodArgs = {Builder.CreatePointerCast(
+      objectLike->codeGen(ST), getLLVMTypeFromDJType("Object"))};
+  methodArgs.push_back(ConstantInt::get(TheContext, APInt(32, staticClassNum)));
+  methodArgs.push_back(
+      ConstantInt::get(TheContext, APInt(32, staticMemberNum)));
   if (paramDeclaredType >= OBJECT_TYPE) {
-    methodArgs.push_back(
-        Builder.CreatePointerCast(methodParameter->codeGen(ST),
-                                  getLLVMTypeFromDJType(paramDeclaredType)));
+    methodArgs.push_back(Builder.CreatePointerCast(
+        methodParameter->codeGen(ST), getLLVMTypeFromDJType("Object")));
   } else {
     methodArgs.push_back(methodParameter->codeGen(ST));
   }
-  return Builder.CreateCall(TheMethod, methodArgs);
+  int declRet =
+      classesST[staticClassNum].methodList[staticMemberNum].returnType;
+  int declParam =
+      classesST[staticClassNum].methodList[staticMemberNum].paramType;
+  std::string VTableRet;
+  std::string VTableParam;
+  if (declRet >= OBJECT_TYPE) {
+    VTableRet = "Object";
+  } else {
+    VTableRet = typeString(declRet);
+  }
+  if (declParam >= OBJECT_TYPE) {
+    VTableParam = "Object";
+  } else {
+    VTableParam = typeString(declParam);
+  }
+  std::string VTable = VTableRet + "VTable" + VTableParam;
+
+  Function *TheFunction = TheModule->getFunction(VTable);
+  return Builder.CreateCall(TheFunction, methodArgs);
 }
 
 Value *DJThis::codeGen(symbolTable ST, int type) {
@@ -915,14 +1075,35 @@ Value *DJUndotMethodCall::codeGen(symbolTable ST, int type) {
   auto className = std::string(typeString(staticClassNum));
   auto LLMethodName = className + "_method_" + methodName;
   symbolTable methodST = NamedValues[LLMethodName];
-  Function *TheMethod = TheModule->getFunction(LLMethodName);
-  std::vector<Value *> methodArgs = {Builder.CreateLoad(ST["this"])};
+  std::vector<Value *> methodArgs = {Builder.CreatePointerCast(
+      Builder.CreateLoad(ST["this"]), getLLVMTypeFromDJType("Object"))};
+  methodArgs.push_back(ConstantInt::get(TheContext, APInt(32, staticClassNum)));
+  methodArgs.push_back(
+      ConstantInt::get(TheContext, APInt(32, staticMemberNum)));
   if (paramDeclaredType >= OBJECT_TYPE) {
-    methodArgs.push_back(
-        Builder.CreatePointerCast(methodParameter->codeGen(ST),
-                                  getLLVMTypeFromDJType(paramDeclaredType)));
+    methodArgs.push_back(Builder.CreatePointerCast(
+        methodParameter->codeGen(ST), getLLVMTypeFromDJType("Object")));
   } else {
     methodArgs.push_back(methodParameter->codeGen(ST));
   }
-  return Builder.CreateCall(TheMethod, methodArgs);
+  int declRet =
+      classesST[staticClassNum].methodList[staticMemberNum].returnType;
+  int declParam =
+      classesST[staticClassNum].methodList[staticMemberNum].paramType;
+  std::string VTableRet;
+  std::string VTableParam;
+  if (declRet >= OBJECT_TYPE) {
+    VTableRet = "Object";
+  } else {
+    VTableRet = typeString(declRet);
+  }
+  if (declParam >= OBJECT_TYPE) {
+    VTableParam = "Object";
+  } else {
+    VTableParam = typeString(declParam);
+  }
+  std::string VTable = VTableRet + "VTable" + VTableParam;
+
+  Function *TheFunction = TheModule->getFunction(VTable);
+  return Builder.CreateCall(TheFunction, methodArgs);
 }

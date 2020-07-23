@@ -65,3 +65,31 @@ int getIndexOfRegularOrInheritedField(std::string ID, int classNum) {
   }
   return -1;
 }
+
+typedef int classID;
+typedef int methodNum;
+std::pair<classID, methodNum>
+getDynamicMethodInfo(int staticClass, int dynamicType, int staticMethod) {
+  int i = 0;
+  ClassDecl dynClass = classesST[dynamicType];
+  char *lookingFor = classesST[staticClass].methodList[staticMethod].methodName;
+  for (; i < dynClass.numMethods; i++) {
+    if (strcmp(dynClass.methodList[i].methodName, lookingFor) == 0) {
+      return std::make_pair(dynamicType, i);
+    }
+  }
+  return std::make_pair(staticClass, staticMethod);
+}
+
+bool methodTypeMatchesVTable(int methodReturn, int methodParam,
+                             std::string VTableRet, std::string VTableParam) {
+  // remember that the type is "Object" so "cast" the method types to that
+  if (methodReturn >= OBJECT_TYPE) {
+    methodReturn = 0;
+  }
+  if (methodParam >= OBJECT_TYPE) {
+    methodParam = 0;
+  }
+  return typeString(methodReturn) == VTableRet &&
+         typeString(methodParam) == VTableParam;
+}
