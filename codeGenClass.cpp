@@ -81,5 +81,15 @@ getDynamicMethodInfo(int staticClass, int staticMethod, int dynamicType) {
   return std::make_pair(staticClass, staticMethod);
 }
 
-bool methodTypeMatchesVTable(int methodParam, int methodReturn,
-                             std::string VTableRet, std::string VTableParam);
+bool methodTypeMatchesVTable(int methodReturn, int methodParam,
+                             std::string VTableRet, std::string VTableParam) {
+  // remember that the type is "Object" so "cast" the method types to that
+  if (methodReturn >= OBJECT_TYPE) {
+    methodReturn = 0;
+  }
+  if (methodParam >= OBJECT_TYPE) {
+    methodParam = 0;
+  }
+  return typeString(methodReturn) == VTableRet &&
+         typeString(methodParam) == VTableParam;
+}
