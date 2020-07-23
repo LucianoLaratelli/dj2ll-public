@@ -80,3 +80,6 @@ getDynamicMethodInfo(int staticClass, int staticMethod, int dynamicType) {
   }
   return std::make_pair(staticClass, staticMethod);
 }
+
+bool methodTypeMatchesVTable(int methodParam, int methodReturn,
+                             std::string VTableRet, std::string VTableParam);

@@ -323,62 +323,61 @@ void emitVTable() {
         for (int k = 1; k < numClasses; k++) { // dynamic class
           for (int j = 0; j < classesST[i].numMethods; j++) {
             auto MST = classesST[i].methodList[j];
-            if (typeString(MST.returnType) == returnType &&
-                typeString(MST.paramType) == paramType) {
-              if (isSubtype(k, i)) {
-                // if static class is staticClass
-                // and dynamic class (from `this`) is i
-                // call dynamic method from dynamic class
-                const auto &[DC, DM] = getDynamicMethodInfo(i, j, k);
-                auto DMST = classesST[DC].methodList[DM];
-                if (MST.paramType >= OBJECT_TYPE) {
-                  originalParam = Builder.CreatePointerBitCastOrAddrSpaceCast(
-                      originalParam, getLLVMTypeFromDJType(DMST.paramType));
-                }
-                originalThis = Builder.CreatePointerCast(
-                    originalThis, getLLVMTypeFromDJType(DC));
-                std::string dynamicClassName = typeString(DC);
-                std::string dynamicMethodName =
-                    classesST[DC].methodList[DM].methodName;
-                auto actualMethodName =
-                    dynamicClassName + "_method_" + dynamicMethodName;
-                std::vector<Value *> actualArgs = {originalThis, originalParam};
-
-                auto incomingDynamicType = Builder.CreateLoad(
-                    Builder.CreateGEP(originalThis, getGEPID()));
-
-                auto condValue = Builder.CreateAnd(
-                    Builder.CreateICmpEQ(
-                        staticType, ConstantInt::get(TheContext, APInt(32, i))),
-                    Builder.CreateICmpEQ(
-                        incomingDynamicType,
-                        ConstantInt::get(TheContext, APInt(32, k))));
-                condValue = Builder.CreateAnd(
-                    condValue, Builder.CreateICmpEQ(
-                                   staticMethod,
-                                   ConstantInt::get(TheContext, APInt(32, j))));
-                Function *TheFunction = Builder.GetInsertBlock()->getParent();
-
-                BasicBlock *ThenBB =
-                    BasicBlock::Create(TheContext, "then", TheFunction);
-                BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
-
-                Builder.CreateCondBr(condValue, ThenBB, ElseBB);
-                // emit then value
-                Builder.SetInsertPoint(ThenBB);
-
-                Value *ret = Builder.CreateCall(
-                    TheModule->getFunction(actualMethodName), actualArgs);
-                if (returnType == "Object") {
-                  ret = Builder.CreatePointerCast(
-                      ret, getLLVMTypeFromDJType(MST.returnType));
-                }
-                Builder.CreateRet(ret);
-
-                ThenBB = Builder.GetInsertBlock();
-                TheFunction->getBasicBlockList().push_back(ElseBB);
-                Builder.SetInsertPoint(ElseBB);
+            if (isSubtype(k, i)) {
+              // if static class is staticClass
+              // and dynamic class (from `this`) is i
+              // call dynamic method from dynamic class
+              // TODO: call methodTypeMatchesVTable to skip this inner loop when
+              // types don't match
+              const auto &[DC, DM] = getDynamicMethodInfo(i, j, k);
+              auto DMST = classesST[DC].methodList[DM];
+              if (MST.paramType >= OBJECT_TYPE) {
+                originalParam = Builder.CreatePointerBitCastOrAddrSpaceCast(
+                    originalParam, getLLVMTypeFromDJType(DMST.paramType));
               }
+              originalThis = Builder.CreatePointerCast(
+                  originalThis, getLLVMTypeFromDJType(DC));
+              std::string dynamicClassName = typeString(DC);
+              std::string dynamicMethodName =
+                  classesST[DC].methodList[DM].methodName;
+              auto actualMethodName =
+                  dynamicClassName + "_method_" + dynamicMethodName;
+              std::vector<Value *> actualArgs = {originalThis, originalParam};
+
+              auto incomingDynamicType = Builder.CreateLoad(
+                  Builder.CreateGEP(originalThis, getGEPID()));
+
+              auto condValue = Builder.CreateAnd(
+                  Builder.CreateICmpEQ(
+                      staticType, ConstantInt::get(TheContext, APInt(32, i))),
+                  Builder.CreateICmpEQ(
+                      incomingDynamicType,
+                      ConstantInt::get(TheContext, APInt(32, k))));
+              condValue = Builder.CreateAnd(
+                  condValue, Builder.CreateICmpEQ(
+                                 staticMethod,
+                                 ConstantInt::get(TheContext, APInt(32, j))));
+              Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+              BasicBlock *ThenBB =
+                  BasicBlock::Create(TheContext, "then", TheFunction);
+              BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+
+              Builder.CreateCondBr(condValue, ThenBB, ElseBB);
+              // emit then value
+              Builder.SetInsertPoint(ThenBB);
+
+              Value *ret = Builder.CreateCall(
+                  TheModule->getFunction(actualMethodName), actualArgs);
+              if (returnType == "Object") {
+                ret = Builder.CreatePointerCast(
+                    ret, getLLVMTypeFromDJType(MST.returnType));
+              }
+              Builder.CreateRet(ret);
+
+              ThenBB = Builder.GetInsertBlock();
+              TheFunction->getBasicBlockList().push_back(ElseBB);
+              Builder.SetInsertPoint(ElseBB);
             }
           }
         }
