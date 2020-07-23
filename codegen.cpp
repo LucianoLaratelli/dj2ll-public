@@ -240,8 +240,8 @@ void emitVTable() {
   // generate the virtual method call table. this method generates nine
   // different functions, which act as the jump tables. each VTable functions
   // takes three arguments: the original `this` pointer, the static type of the
-  // caller, and the original parameter. the `this` pointer contains the dynamic
-  // type.
+  // caller,the static method number of the caller and the original parameter.
+  // the `this` pointer contains the dynamic type.
 
   // nat natVTablenat();
   // nat natVTablebool();
@@ -304,10 +304,9 @@ void emitVTable() {
   std::vector<Type *> functionArgs;
   llvm::FunctionType *methodType;
   for (const auto &[returnType, params] : VTable) {
-    std::cout << returnType << "\n";
     for (const auto &[paramType, methodInformation] : params) {
-      std::cout << FOURSPACES << paramType << "\n";
       functionArgs = {PointerType::getUnqual(allocatedClasses["Object"]),
+                      getLLVMTypeFromDJType("nat"), /*it's just an int*/
                       getLLVMTypeFromDJType("nat"), /*it's just an int*/
                       getLLVMTypeFromDJType(paramType)};
       methodType = FunctionType::get(getLLVMTypeFromDJType(returnType),
@@ -316,67 +315,71 @@ void emitVTable() {
           Function::Create(methodType, Function::ExternalLinkage,
                            returnType + "VTable" + paramType, TheModule.get());
       Builder.SetInsertPoint(createBB(method, "entry"));
-      for (const auto &[methodName, staticClass, staticMethodNum] :
-           methodInformation) {
-        std::cout << EIGHTSPACES << methodName << " " << staticClass << " "
-                  << staticMethodNum << "\n";
-        for (int i = 1; i < numClasses; i++) {
-          // iterating through every class, we check to see if the current class
-          // is a subtype of the class which declares the method we are
-          // examining at the moment. if it is, we'll emit a call to the
-          // appropriate function.
-          if (isSubtype(i, staticClass)) {
-            auto [dynamicClass, dynamicMethod] =
-                getDynamicMethodInfo(staticClass, staticMethodNum, i);
-            std::cout << staticClass << " " << staticMethodNum << " " << i
-                      << " " << dynamicClass << " " << dynamicMethod << "\n";
-            Value *originalThis = method->getArg(0);
-            auto methodStaticClass = method->getArg(1);
-            Value *originalParam = method->getArg(2);
-            auto condValue = Builder.CreateAnd(
-                // compare static class (passed in by caller)
-                Builder.CreateICmpEQ(
-                    methodStaticClass,
-                    ConstantInt::get(TheContext, APInt(32, i))),
-                Builder.CreateICmpEQ(
-                    // load dynamic class type from `this`
-                    Builder.CreateLoad(
-                        Builder.CreateGEP(originalThis, getGEPID())),
-                    ConstantInt::get(TheContext, APInt(32, dynamicClass))));
-            Function *TheFunction = Builder.GetInsertBlock()->getParent();
+      Value *originalThis = method->getArg(0);
+      Value *staticType = method->getArg(1);
+      Value *staticMethod = method->getArg(2);
+      Value *originalParam = method->getArg(3);
+      for (int i = 1; i < numClasses; i++) {   // staticClass
+        for (int k = 1; k < numClasses; k++) { // dynamic class
+          for (int j = 0; j < classesST[i].numMethods; j++) {
+            auto MST = classesST[i].methodList[j];
+            if (typeString(MST.returnType) == returnType &&
+                typeString(MST.paramType) == paramType) {
+              if (isSubtype(k, i)) {
+                // if static class is staticClass
+                // and dynamic class (from `this`) is i
+                // call dynamic method from dynamic class
+                const auto &[DC, DM] = getDynamicMethodInfo(i, j, k);
+                auto DMST = classesST[DC].methodList[DM];
+                if (MST.paramType >= OBJECT_TYPE) {
+                  originalParam = Builder.CreatePointerBitCastOrAddrSpaceCast(
+                      originalParam, getLLVMTypeFromDJType(DMST.paramType));
+                }
+                originalThis = Builder.CreatePointerCast(
+                    originalThis, getLLVMTypeFromDJType(DC));
+                std::string dynamicClassName = typeString(DC);
+                std::string dynamicMethodName =
+                    classesST[DC].methodList[DM].methodName;
+                auto actualMethodName =
+                    dynamicClassName + "_method_" + dynamicMethodName;
+                std::vector<Value *> actualArgs = {originalThis, originalParam};
 
-            BasicBlock *ThenBB =
-                BasicBlock::Create(TheContext, "then", TheFunction);
-            BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+                auto incomingDynamicType = Builder.CreateLoad(
+                    Builder.CreateGEP(originalThis, getGEPID()));
 
-            Builder.CreateCondBr(condValue, ThenBB, ElseBB);
-            Builder.SetInsertPoint(ThenBB);
-            // bitcast `this` to the type of the original caller
-            originalThis = Builder.CreatePointerBitCastOrAddrSpaceCast(
-                originalThis, getLLVMTypeFromDJType(staticClass));
-            if (paramType == "Object") {
-              // bitcast parameter type to correct type
-              originalParam = Builder.CreatePointerBitCastOrAddrSpaceCast(
-                  originalParam,
-                  getLLVMTypeFromDJType(classesST[staticClass]
-                                            .methodList[staticMethodNum]
-                                            .paramType));
+                auto condValue = Builder.CreateAnd(
+                    Builder.CreateICmpEQ(
+                        staticType, ConstantInt::get(TheContext, APInt(32, i))),
+                    Builder.CreateICmpEQ(
+                        incomingDynamicType,
+                        ConstantInt::get(TheContext, APInt(32, k))));
+                condValue = Builder.CreateAnd(
+                    condValue, Builder.CreateICmpEQ(
+                                   staticMethod,
+                                   ConstantInt::get(TheContext, APInt(32, j))));
+                Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+                BasicBlock *ThenBB =
+                    BasicBlock::Create(TheContext, "then", TheFunction);
+                BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+
+                Builder.CreateCondBr(condValue, ThenBB, ElseBB);
+                // emit then value
+                Builder.SetInsertPoint(ThenBB);
+
+                Value *ret = Builder.CreateCall(
+                    TheModule->getFunction(actualMethodName), actualArgs);
+                if (returnType == "Object") {
+                  ret = Builder.CreatePointerCast(
+                      ret, getLLVMTypeFromDJType(MST.returnType));
+                }
+                Builder.CreateRet(ret);
+
+                ThenBB = Builder.GetInsertBlock();
+                TheFunction->getBasicBlockList().push_back(ElseBB);
+                Builder.SetInsertPoint(ElseBB);
+              }
             }
-            std::vector<Value *> methodArgs = {originalThis, originalParam};
-            Value *ret = Builder.CreateCall(TheModule->getFunction(methodName),
-                                            methodArgs);
-            if (returnType == "Object") {
-              // adjust return type
-              ret = Builder.CreatePointerBitCastOrAddrSpaceCast(
-                  ret, getLLVMTypeFromDJType(classesST[staticClass]
-                                                 .methodList[staticMethodNum]
-                                                 .returnType));
-            }
-            Builder.CreateRet(ret);
-
-            ThenBB = Builder.GetInsertBlock();
-            TheFunction->getBasicBlockList().push_back(ElseBB);
-            Builder.SetInsertPoint(ElseBB);
           }
         }
       }
@@ -542,6 +545,7 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
       superClass = classesST[superClass].superclass;
     }
   }
+  emitVTable();
   // define methods declared in this class
   for (int i = 0; i < numClasses; i++) {
     auto declaredClass = std::string(classesST[i].className);
@@ -587,7 +591,6 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
       superClass = classesST[superClass].superclass;
     }
   }
-  emitVTable();
   /*begin codegen for `main`*/
   Function *DJmain = createFunc(Builder, "main");
   BasicBlock *entry = createBB(DJmain, "entry");
@@ -1068,16 +1071,38 @@ Value *DJDotMethodCall::codeGen(symbolTable ST, int type) {
   auto LLMethodName = className + "_method_" + methodName;
   symbolTable methodST = NamedValues[LLMethodName];
   symbolTable classST = NamedValues[className];
-  Function *TheMethod = TheModule->getFunction(LLMethodName);
-  std::vector<Value *> methodArgs = {objectLike->codeGen(ST)};
+  std::vector<Value *> methodArgs = {
+      Builder.CreatePointerBitCastOrAddrSpaceCast(
+          objectLike->codeGen(ST), getLLVMTypeFromDJType("Object"))};
+  methodArgs.push_back(ConstantInt::get(TheContext, APInt(32, staticClassNum)));
+  methodArgs.push_back(
+      ConstantInt::get(TheContext, APInt(32, staticMemberNum)));
   if (paramDeclaredType >= OBJECT_TYPE) {
-    methodArgs.push_back(
-        Builder.CreatePointerCast(methodParameter->codeGen(ST),
-                                  getLLVMTypeFromDJType(paramDeclaredType)));
+    methodArgs.push_back(Builder.CreatePointerCast(
+        methodParameter->codeGen(ST), getLLVMTypeFromDJType("Object")));
   } else {
     methodArgs.push_back(methodParameter->codeGen(ST));
   }
-  return Builder.CreateCall(TheMethod, methodArgs);
+  int declRet =
+      classesST[staticClassNum].methodList[staticMemberNum].returnType;
+  int declParam =
+      classesST[staticClassNum].methodList[staticMemberNum].paramType;
+  std::string VTableRet;
+  std::string VTableParam;
+  if (declRet >= OBJECT_TYPE) {
+    VTableRet = "Object";
+  } else {
+    VTableRet = typeString(declRet);
+  }
+  if (declParam >= OBJECT_TYPE) {
+    VTableParam = "Object";
+  } else {
+    VTableParam = typeString(declParam);
+  }
+  std::string VTable = VTableRet + "VTable" + VTableParam;
+
+  Function *TheFunction = TheModule->getFunction(VTable);
+  return Builder.CreateCall(TheFunction, methodArgs);
 }
 
 Value *DJThis::codeGen(symbolTable ST, int type) {

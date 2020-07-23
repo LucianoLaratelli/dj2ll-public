@@ -70,7 +70,6 @@ typedef int classID;
 typedef int methodNum;
 std::pair<classID, methodNum>
 getDynamicMethodInfo(int staticClass, int staticMethod, int dynamicType) {
-
   int i = 0;
   ClassDecl dynClass = classesST[dynamicType];
   char *lookingFor = classesST[staticClass].methodList[staticMethod].methodName;
