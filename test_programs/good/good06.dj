@@ -9,22 +9,37 @@
 //  3
 
 class Tester extends Object {
-  bool print4returnTrue(nat unused) { printNat(4); true; }
+  bool print4returnTrue(nat unused) {
+    printNat(4);
+    true;
+  }
 }
 
 main {
   Tester test;
   test = new Tester();
 
-  if(false&&false) {printNat(987);}
-  else {printNat(3);};
+  if (false && false) {
+    printNat(987);
+  } else {
+    printNat(3);
+  };
 
-  if(true && test.print4returnTrue(0)) {printNat(987);}
-  else {printNat(3);};
+  if (true && test.print4returnTrue(0)) {
+    printNat(987);
+  } else {
+    printNat(3);
+  };
 
-  if(test.print4returnTrue(0) && false) {printNat(987);}
-  else {printNat(3);};
+  if (test.print4returnTrue(0) && false) {
+    printNat(987);
+  } else {
+    printNat(3);
+  };
 
-  if(false && test.print4returnTrue(0)) {printNat(987);}
-  else {printNat(3);};
+  if (false && test.print4returnTrue(0)) {
+    printNat(987);
+  } else {
+    printNat(3);
+  };
 }

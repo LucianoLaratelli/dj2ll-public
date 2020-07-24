@@ -1,3 +1,4 @@
+//-*-mode:java-*-
 //This is a lexically, syntactically, and semantically
 //valid DJ program.  However, an error occurs during
 //execution because we try to select a field/method 
