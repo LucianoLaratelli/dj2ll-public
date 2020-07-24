@@ -1062,11 +1062,43 @@ Value *DJInstanceOf::codeGen(symbolTable ST, int type) {
   // function to determine if the type of the testee expression is a subtype of
   // the classID
   Value *testee = objectLike->codeGen(ST);
+
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+  BasicBlock *ThenBB = BasicBlock::Create(TheContext, "then", TheFunction);
+  BasicBlock *ElseBB = BasicBlock::Create(TheContext, "else");
+  BasicBlock *MergeBB = BasicBlock::Create(TheContext, "ifcont");
+
+  auto condValue = Builder.CreateIsNull(testee);
+  Builder.CreateCondBr(condValue, ThenBB, ElseBB);
+  // emit then value
+  Builder.SetInsertPoint(ThenBB);
+  Value *thenV = ConstantInt::get(TheContext, APInt(1, 0));
+  Builder.CreateBr(MergeBB);
+  // Codegen of 'Then' can change the current block, update ThenBB for the
+  // PHI.
+  ThenBB = Builder.GetInsertBlock();
+  // Emit else block.
+  TheFunction->getBasicBlockList().push_back(ElseBB);
+  Builder.SetInsertPoint(ElseBB);
   Value *I = Builder.CreateGEP(testee, getGEPID());
   std::vector<Value *> ITableArgs = {
       Builder.CreateLoad(I), ConstantInt::get(TheContext, APInt(32, classID))};
-  Function *TheFunction = TheModule->getFunction("ITable");
-  return Builder.CreateCall(TheFunction, ITableArgs);
+  Function *ITable = TheModule->getFunction("ITable");
+  Value *elseV = Builder.CreateCall(ITable, ITableArgs);
+
+  Builder.CreateBr(MergeBB);
+  // codegen of 'Else' can change the current block, update ElseBB for the
+  // PHI.
+  ElseBB = Builder.GetInsertBlock();
+  // Emit merge block.
+  TheFunction->getBasicBlockList().push_back(MergeBB);
+  Builder.SetInsertPoint(MergeBB);
+  PHINode *PN = Builder.CreatePHI(Type::getInt1Ty(TheContext), 2, "iftmp");
+
+  PN->addIncoming(thenV, ThenBB);
+  PN->addIncoming(elseV, ElseBB);
+  return PN;
 }
 
 Value *DJDotMethodCall::codeGen(symbolTable ST, int type) {
