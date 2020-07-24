@@ -1043,19 +1043,14 @@ Value *DJDotAssign::codeGen(symbolTable ST, int type) {
   } else {
     auto IDIndex = getGEPIndex(ID, staticClassNum);
     if (hasNullChild) {
-      auto I = GetElementPtrInst::Create(
-          allocatedClasses[typeString(staticClassNum)], objectLike->codeGen(ST),
-          IDIndex);
-      Builder.Insert(I);
+      auto I =
+          Builder.CreateGEP(objectLike->codeGen(ST, staticClassNum), IDIndex);
       ret = assignVal->codeGen(ST, staticClassNum);
       ret =
           Builder.CreatePointerCast(ret, getLLVMTypeFromDJType(staticClassNum));
       Builder.CreateStore(ret, I);
     } else {
-      auto I = GetElementPtrInst::Create(
-          allocatedClasses[typeString(staticClassNum)], objectLike->codeGen(ST),
-          IDIndex);
-      Builder.Insert(I);
+      auto I = Builder.CreateGEP(objectLike->codeGen(ST), IDIndex);
       Builder.CreateStore(ret, I);
     }
   }
@@ -1116,7 +1111,12 @@ Value *DJDotMethodCall::codeGen(symbolTable ST, int type) {
   std::string VTable = VTableRet + "VTable" + VTableParam;
 
   Function *TheFunction = TheModule->getFunction(VTable);
-  return Builder.CreateCall(TheFunction, methodArgs);
+  Value *ret = Builder.CreateCall(TheFunction, methodArgs);
+  if (classesST[staticClassNum].methodList[staticMemberNum].returnType >=
+      OBJECT_TYPE) {
+    ret = Builder.CreatePointerCast(ret, getLLVMTypeFromDJType(staticClassNum));
+  }
+  return ret;
 }
 
 Value *DJThis::codeGen(symbolTable ST, int type) {
@@ -1157,5 +1157,10 @@ Value *DJUndotMethodCall::codeGen(symbolTable ST, int type) {
   std::string VTable = VTableRet + "VTable" + VTableParam;
 
   Function *TheFunction = TheModule->getFunction(VTable);
-  return Builder.CreateCall(TheFunction, methodArgs);
+  Value *ret = Builder.CreateCall(TheFunction, methodArgs);
+  if (classesST[staticClassNum].methodList[staticMemberNum].returnType >=
+      OBJECT_TYPE) {
+    ret = Builder.CreatePointerCast(ret, getLLVMTypeFromDJType(staticClassNum));
+  }
+  return ret;
 }
