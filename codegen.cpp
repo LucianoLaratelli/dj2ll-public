@@ -1066,6 +1066,9 @@ Value *DJInstanceOf::codeGen(symbolTable ST, int type) {
   // using the class ID stored at the 1th field in the struct, call the ITable
   // function to determine if the type of the testee expression is a subtype of
   // the classID
+  if (hasNullChild) {
+    return ConstantInt::get(TheContext, APInt(1, 0));
+  }
   Value *testee = objectLike->codeGen(ST);
   std::vector<Value *> elementIndex = {
       ConstantInt::get(TheContext, APInt(32, 0)),
