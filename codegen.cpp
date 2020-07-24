@@ -402,6 +402,9 @@ void generateMethodST(int classNum, int methodNum, int inheritedFrom = 0) {
       genericSymbolTable[name] = Builder.CreateAlloca(
           PointerType::getUnqual(allocatedClasses[varTypeString]),
           genericSymbolTable[name]);
+      Builder.CreateStore(
+          Constant::getNullValue(getLLVMTypeFromDJType(var.type)),
+          genericSymbolTable[name]);
       break;
     }
   }
@@ -580,6 +583,9 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
       char *varType = typeString(mainBlockST[i].type);
       MainSymbolTable[varName] = Builder.CreateAlloca(
           PointerType::getUnqual(allocatedClasses[varType]),
+          MainSymbolTable[varName]);
+      Builder.CreateStore(
+          Constant::getNullValue(getLLVMTypeFromDJType(mainBlockST[i].type)),
           MainSymbolTable[varName]);
       break;
     }
