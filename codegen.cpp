@@ -735,7 +735,50 @@ Value *DJGreater::codeGen(symbolTable ST, int type) {
 }
 
 Value *DJAnd::codeGen(symbolTable ST, int type) {
-  return Builder.CreateAnd(lhs->codeGen(ST), rhs->codeGen(ST));
+  // implement && expressions as an if/then/else to model short-circuiting
+  // behavior.
+  // return Builder.CreateAnd(lhs->codeGen(ST), rhs->codeGen(ST));
+  Function *TheFunction = Builder.GetInsertBlock()->getParent();
+
+  // Create blocks for the then and else cases.  Insert the 'then' block at
+  // the end of the function.
+  BasicBlock *firstTrue = BasicBlock::Create(TheContext, "first", TheFunction);
+  BasicBlock *bothTrue = BasicBlock::Create(TheContext, "both", TheFunction);
+  BasicBlock *oneFalse = BasicBlock::Create(TheContext, "one");
+  BasicBlock *MergeBB = BasicBlock::Create(TheContext, "andMerge");
+
+  Builder.CreateCondBr(lhs->codeGen(ST), firstTrue, oneFalse);
+  // Emit then value.
+  Builder.SetInsertPoint(firstTrue);
+
+  Builder.CreateCondBr(rhs->codeGen(ST), bothTrue, oneFalse);
+
+  Builder.SetInsertPoint(bothTrue);
+
+  Value *BothV = ConstantInt::get(TheContext, APInt(1, 1));
+
+  Builder.CreateBr(MergeBB);
+  bothTrue = Builder.GetInsertBlock();
+  // Codegen of 'Then' can change the current block, update ThenBB for the
+  // PHI.
+  // Emit else block.
+  TheFunction->getBasicBlockList().push_back(oneFalse);
+  Builder.SetInsertPoint(oneFalse);
+
+  Value *OneV = ConstantInt::get(TheContext, APInt(1, 0));
+
+  Builder.CreateBr(MergeBB);
+  // codegen of 'Else' can change the current block, update ElseBB for the
+  // PHI.
+  oneFalse = Builder.GetInsertBlock();
+  // Emit merge block.
+  TheFunction->getBasicBlockList().push_back(MergeBB);
+  Builder.SetInsertPoint(MergeBB);
+  PHINode *PN = Builder.CreatePHI(Type::getInt1Ty(TheContext), 2, "andTmp");
+
+  PN->addIncoming(BothV, bothTrue);
+  PN->addIncoming(OneV, oneFalse);
+  return PN;
 }
 
 Value *DJTrue::codeGen(symbolTable ST, int type) {
