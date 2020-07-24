@@ -13,6 +13,8 @@ undotted_method_call = ["good07.dj", "good15.dj", "good17.dj", "goodMine1.dj"]
 
 vtable = ["good08.dj", "good09.dj", "good19.dj", "good33.dj"]
 
+null = ["good10.dj", "good27.dj", "good24.dj", "good29.dj", "good31.dj"]
+
 
 def main():
     if len(sys.argv) == 1:
