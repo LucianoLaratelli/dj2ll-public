@@ -1061,18 +1061,10 @@ Value *DJInstanceOf::codeGen(symbolTable ST, int type) {
   // using the class ID stored at the 1th field in the struct, call the ITable
   // function to determine if the type of the testee expression is a subtype of
   // the classID
-  if (hasNullChild) {
-    return ConstantInt::get(TheContext, APInt(1, 0));
-  }
   Value *testee = objectLike->codeGen(ST);
-  std::vector<Value *> elementIndex = {
-      ConstantInt::get(TheContext, APInt(32, 0)),
-      ConstantInt::get(TheContext, APInt(32, 1))};
-  auto I = GetElementPtrInst::Create(
-      allocatedClasses[typeString(staticClassNum)], testee, elementIndex);
+  Value *I = Builder.CreateGEP(testee, getGEPID());
   std::vector<Value *> ITableArgs = {
-      Builder.CreateLoad(Builder.Insert(I)),
-      ConstantInt::get(TheContext, APInt(32, classID))};
+      Builder.CreateLoad(I), ConstantInt::get(TheContext, APInt(32, classID))};
   Function *TheFunction = TheModule->getFunction("ITable");
   return Builder.CreateCall(TheFunction, ITableArgs);
 }
