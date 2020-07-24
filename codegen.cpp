@@ -334,7 +334,7 @@ void emitVTable() {
                     TheModule->getFunction(actualMethodName), actualArgs);
                 if (returnType == "Object") {
                   ret = Builder.CreatePointerCast(
-                      ret, getLLVMTypeFromDJType(MST.returnType));
+                      ret, getLLVMTypeFromDJType("Object"));
                 }
                 Builder.CreateRet(ret);
 
