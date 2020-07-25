@@ -325,6 +325,9 @@ void generateMethodST(int classNum, int methodNum, int inheritedFrom = 0) {
   } else {
     method = classesST[inheritedFrom].methodList[methodNum];
   }
+  // note that we keep the original class name here, even if the method itself
+  // is inherited from another class. I opted to do it this way to have it be
+  // explicit in the IR, but there's no real benefit there.
   auto methodName = className + "_method_" + method.methodName;
   Function *LLMethod = TheModule->getFunction(methodName);
   genericSymbolTable["this"] =
@@ -335,32 +338,13 @@ void generateMethodST(int classNum, int methodNum, int inheritedFrom = 0) {
       LLMethod->getArg(1)->getType(), nullptr, method.paramName);
   Builder.CreateStore(LLMethod->getArg(1),
                       genericSymbolTable[method.paramName]);
-  for (int k = 0; k < method.numLocals; k++) {
-    auto var = method.localST[k];
+  for (int i = 0; i < method.numLocals; i++) {
+    auto var = method.localST[i];
     auto name = var.varName;
-    switch (var.type) {
-    case TYPE_NAT:
-      genericSymbolTable[name] =
-          Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, name);
-      Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, 0)),
-                          genericSymbolTable[name]);
-      break;
-    case TYPE_BOOL:
-      genericSymbolTable[name] =
-          Builder.CreateAlloca(Type::getInt1Ty(TheContext), nullptr, name);
-      Builder.CreateStore(ConstantInt::get(TheContext, APInt(1, 0)),
-                          genericSymbolTable[name]);
-      break;
-    default:
-      char *varTypeString = typeString(var.type);
-      genericSymbolTable[name] = Builder.CreateAlloca(
-          PointerType::getUnqual(allocatedClasses[varTypeString]),
-          genericSymbolTable[name]);
-      Builder.CreateStore(
-          Constant::getNullValue(getLLVMTypeFromDJType(var.type)),
-          genericSymbolTable[name]);
-      break;
-    }
+    auto LLType = getLLVMTypeFromDJType(var.type);
+    genericSymbolTable[name] = Builder.CreateAlloca(LLType, nullptr, name);
+    Builder.CreateStore(Constant::getNullValue(LLType),
+                        genericSymbolTable[name]);
   }
   NamedValues[methodName] = genericSymbolTable;
 }
