@@ -482,29 +482,10 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
   Builder.SetInsertPoint(entry);
   for (int i = 0; i < numMainBlockLocals; i++) {
     char *varName = mainBlockST[i].varName;
-    switch (mainBlockST[i].type) {
-    case TYPE_NAT:
-      MainSymbolTable[varName] =
-          Builder.CreateAlloca(Type::getInt32Ty(TheContext), nullptr, varName);
-      Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, 0)),
-                          MainSymbolTable[varName]);
-      break;
-    case TYPE_BOOL:
-      MainSymbolTable[varName] =
-          Builder.CreateAlloca(Type::getInt1Ty(TheContext), nullptr, varName);
-      Builder.CreateStore(ConstantInt::get(TheContext, APInt(1, 0)),
-                          MainSymbolTable[varName]);
-      break;
-    default:
-      char *varType = typeString(mainBlockST[i].type);
-      MainSymbolTable[varName] = Builder.CreateAlloca(
-          PointerType::getUnqual(allocatedClasses[varType]),
-          MainSymbolTable[varName]);
-      Builder.CreateStore(
-          Constant::getNullValue(getLLVMTypeFromDJType(mainBlockST[i].type)),
-          MainSymbolTable[varName]);
-      break;
-    }
+    auto LLType = getLLVMTypeFromDJType(mainBlockST[i].type);
+    MainSymbolTable[varName] = Builder.CreateAlloca(LLType, nullptr, varName);
+    Builder.CreateStore(Constant::getNullValue(LLType),
+                        MainSymbolTable[varName]);
   }
   NamedValues["main"] = MainSymbolTable;
   Value *last = nullptr;
