@@ -387,31 +387,17 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
     auto declaredClass = std::string(classesST[i].className);
     for (int j = 0; j < classesST[i].numStaticVars; j++) {
       auto var = classesST[i].staticVarList[j];
-      /*the class that declares this static variable*/
       auto name = declaredClass + "." + var.varName;
-      switch (var.type) {
-      case TYPE_NAT:
-        GlobalValues[name] = new GlobalVariable(
-            *TheModule.get(), Type::getInt32Ty(TheContext), false,
-            llvm::GlobalValue::LinkageTypes::CommonLinkage, nullptr, name);
-        GlobalValues[name]->setInitializer(
-            ConstantInt::get(TheContext, APInt(32, 0)));
-        break;
-      case TYPE_BOOL:
-        GlobalValues[name] = new GlobalVariable(
-            *TheModule.get(), Type::getInt1Ty(TheContext), false,
-            llvm::GlobalValue::LinkageTypes::CommonLinkage, nullptr, name);
-        GlobalValues[name]->setInitializer(
-            ConstantInt::get(TheContext, APInt(1, 0)));
-        break;
-      default:
-        GlobalValues[name] = new GlobalVariable(
-            *TheModule.get(),
-            PointerType::getUnqual(allocatedClasses[declaredClass]), false,
-            GlobalValue::LinkageTypes::ExternalLinkage, nullptr, name);
+      auto LLType = getLLVMTypeFromDJType(var.type);
+      GlobalValues[name] = new GlobalVariable(
+          *TheModule.get(), LLType, false,
+          GlobalValue::LinkageTypes::CommonLinkage, nullptr, name);
+      if (var.type < OBJECT_TYPE) {
+        GlobalValues[name]->setInitializer(Constant::getNullValue(LLType));
       }
     }
   }
+
   for (int i = 0; i < numClasses; i++) {
     // emit method declarations
     std::vector<Type *> functionArgs;
