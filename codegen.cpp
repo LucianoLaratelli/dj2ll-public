@@ -88,28 +88,10 @@ std::vector<Type *> calculateInheritedStorageNeeds(
   int count = 0;
   std::vector<Type *> members;
   while (count < numClasses && classNum != 0 && classNum != -4) {
-    for (int j = 0; j < classesST[classNum].numVars; j++) {
-      switch (classesST[classNum].varList[j].type) {
-      case BAD_TYPE:
-      case NO_OBJECT:
-      case ANY_OBJECT:
-        std::cerr
-            << "bad regular var encountered in calculateClassStorageNeeds\n";
-        exit(-1);
-      case TYPE_BOOL: {
-        members.push_back(Type::getInt1Ty(TheContext));
-        break;
-      }
-      case TYPE_NAT: {
-        members.push_back(Type::getInt32Ty(TheContext));
-        break;
-      }
-      default: { // all objects
-        members.push_back(PointerType::getUnqual(
-            allocatedClasses[typeString(classesST[classNum].varList[j].type)]));
-        break;
-      }
-      }
+    auto classST = classesST[classNum];
+    auto varST = classST.varList;
+    for (int j = 0; j < classST.numVars; j++) {
+      members.push_back(getLLVMTypeFromDJType(varST[j].type));
     }
     classNum = classesST[classNum].superclass;
   }
