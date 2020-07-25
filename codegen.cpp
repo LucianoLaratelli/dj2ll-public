@@ -399,49 +399,41 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
   }
 
   for (int i = 0; i < numClasses; i++) {
-    // emit method declarations
+    // emit method declarations, both for the methods declared by this class and
+    // by the methods any of its superclasses declare. Remember that a method
+    // can override superclass methods; that's the purpose for the nullptr check
+    // here: if the method already exists in the symbol table we have no need
+    // for it. It's critical to emit all method declarations before any method
+    // definitions are emitted, because a method body may contain any method
+    // declared in the program.
     std::vector<Type *> functionArgs;
     llvm::FunctionType *methodType;
-    auto declaredClass = std::string(classesST[i].className);
-    for (int j = 0; j < classesST[i].numMethods; j++) {
-      auto methodST = classesST[i].methodList[j];
-      auto methodName = declaredClass + "_method_" + methodST.methodName;
-      functionArgs = {PointerType::getUnqual(allocatedClasses[declaredClass]),
-                      getLLVMTypeFromDJType(methodST.paramType)};
-      methodType = FunctionType::get(getLLVMTypeFromDJType(methodST.returnType),
-                                     functionArgs, false);
-      Function::Create(methodType, llvm::Function::ExternalLinkage, methodName,
-                       TheModule.get());
-    }
-    // declare methods inherited from super classes, unless the current class
-    // overrides them. we have to declare all methods first because any method
-    // is free to call any other method; if we codegen the body of a method
-    // definition before all class declarations have been created, we'll seg
-    // fault when we go get the function from the module.
-    auto superClass = classesST[i].superclass;
-    while (superClass != NO_OBJECT) {
-      for (int j = 0; j < classesST[superClass].numMethods; j++) {
-        auto methodST = classesST[superClass].methodList[j];
+    auto classST = classesST[i];
+    auto declaredClass = std::string(classST.className);
+    while (classST.superclass != NO_OBJECT) {
+      for (int j = 0; j < classST.numMethods; j++) {
+        auto methodST = classST.methodList[j];
         auto methodName = declaredClass + "_method_" + methodST.methodName;
         if (TheModule->getFunction(methodName) == nullptr) {
-          functionArgs = {
-              PointerType::getUnqual(allocatedClasses[declaredClass]),
-              getLLVMTypeFromDJType(methodST.paramType)};
+          functionArgs = {getLLVMTypeFromDJType(declaredClass),
+                          getLLVMTypeFromDJType(methodST.paramType)};
           methodType = FunctionType::get(
               getLLVMTypeFromDJType(methodST.returnType), functionArgs, false);
           Function::Create(methodType, llvm::Function::ExternalLinkage,
                            methodName, TheModule.get());
         }
       }
-      superClass = classesST[superClass].superclass;
+      classST = classesST[classST.superclass];
     }
   }
   emitVTable();
   // define methods declared in this class
+
   for (int i = 0; i < numClasses; i++) {
-    auto declaredClass = std::string(classesST[i].className);
-    for (int j = 0; j < classesST[i].numMethods; j++) {
-      auto methodST = classesST[i].methodList[j];
+    auto classST = classesST[i];
+    auto declaredClass = std::string(classST.className);
+    for (int j = 0; j < classST.numMethods; j++) {
+      auto methodST = classST.methodList[j];
       auto methodName = declaredClass + "_method_" + methodST.methodName;
       auto method = TheModule->getFunction(methodName);
       Builder.SetInsertPoint(createBB(method, "entry"));
@@ -451,11 +443,10 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
         last = e->codeGen(NamedValues[methodName]);
       }
       if (methodST.returnType >= OBJECT_TYPE) {
-        Builder.CreateRet(Builder.CreatePointerCast(
-            last, getLLVMTypeFromDJType(methodST.returnType)));
-      } else {
-        Builder.CreateRet(last);
+        last = Builder.CreatePointerCast(
+            last, getLLVMTypeFromDJType(methodST.returnType));
       }
+      Builder.CreateRet(last);
     }
     auto superClass = classesST[i].superclass;
     while (superClass != NO_OBJECT) {
@@ -482,6 +473,7 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
       superClass = classesST[superClass].superclass;
     }
   }
+
   /*begin codegen for `main`*/
   Function *DJmain = createFunc(Builder, "main");
   BasicBlock *entry = createBB(DJmain, "entry");
@@ -983,8 +975,8 @@ Value *DJDotAssign::codeGen(symbolTable ST, int type) {
 
 Value *DJInstanceOf::codeGen(symbolTable ST, int type) {
   // using the class ID stored at the 1th field in the struct, call the ITable
-  // function to determine if the type of the testee expression is a subtype of
-  // the classID
+  // function to determine if the type of the testee expression is a subtype
+  // of the classID
   Value *testee = objectLike->codeGen(ST);
 
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
