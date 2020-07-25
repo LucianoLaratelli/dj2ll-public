@@ -640,11 +640,8 @@ Value *DJGreater::codeGen(symbolTable ST, int type) {
 Value *DJAnd::codeGen(symbolTable ST, int type) {
   // implement && expressions as an if/then/else to model short-circuiting
   // behavior.
-  // return Builder.CreateAnd(lhs->codeGen(ST), rhs->codeGen(ST));
   Function *TheFunction = Builder.GetInsertBlock()->getParent();
 
-  // Create blocks for the then and else cases.  Insert the 'then' block at
-  // the end of the function.
   BasicBlock *firstTrue = BasicBlock::Create(TheContext, "first", TheFunction);
   BasicBlock *bothTrue = BasicBlock::Create(TheContext, "both", TheFunction);
   BasicBlock *oneFalse = BasicBlock::Create(TheContext, "one");
@@ -662,17 +659,14 @@ Value *DJAnd::codeGen(symbolTable ST, int type) {
 
   Builder.CreateBr(MergeBB);
   bothTrue = Builder.GetInsertBlock();
-  // Codegen of 'Then' can change the current block, update ThenBB for the
-  // PHI.
-  // Emit else block.
+
   TheFunction->getBasicBlockList().push_back(oneFalse);
   Builder.SetInsertPoint(oneFalse);
 
   Value *OneV = ConstantInt::get(TheContext, APInt(1, 0));
 
   Builder.CreateBr(MergeBB);
-  // codegen of 'Else' can change the current block, update ElseBB for the
-  // PHI.
+
   oneFalse = Builder.GetInsertBlock();
   // Emit merge block.
   TheFunction->getBasicBlockList().push_back(MergeBB);
@@ -853,9 +847,9 @@ Value *DJAssign::codeGen(symbolTable ST, int type) {
 
 Value *DJNull::codeGen(symbolTable ST, int type) {
   if (type == -1) {
-    // case where null is not compared or assigned to a variable of object
-    // type, we can simply return a null int. this also covers the case where
-    // null is compared to null, etc
+    // when null is not compared or assigned to a variable of object type, we
+    // can simply return a null int. this also covers the case where null is
+    // compared to null, etc
     return Constant::getNullValue(Type::getInt32Ty(TheContext));
   }
   return ConstantPointerNull::get(
