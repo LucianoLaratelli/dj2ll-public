@@ -105,41 +105,22 @@ std::map<std::string, std::vector<llvm::Type *>> calculateClassStorageNeeds(
   std::vector<llvm::Type *> members;
   symbolTable genericST;
   for (int i = 0; i < numClasses; i++) {
-    /*allocate `this` pointer*/
-    members.push_back(
-        PointerType::getUnqual(allocatedClasses[classesST[i].className]));
-    /*make space for class ID*/
-    members.push_back(Type::getInt32Ty(TheContext));
-    for (int j = 0; j < classesST[i].numVars; j++) {
-      genericST[classesST[i].varList[j].varName] = nullptr;
-      switch (classesST[i].varList[j].type) {
-      case BAD_TYPE:
-      case NO_OBJECT:
-      case ANY_OBJECT:
-        std::cerr
-            << "bad regular var encountered in calculateClassStorageNeeds\n";
-        exit(-1);
-      case TYPE_BOOL: {
-        members.push_back(Type::getInt1Ty(TheContext));
-        break;
-      }
-      case TYPE_NAT: {
-        members.push_back(Type::getInt32Ty(TheContext));
-        break;
-      }
-      default: { // all objects
-        members.push_back(PointerType::getUnqual(
-            allocatedClasses[typeString(classesST[i].varList[j].type)]));
-        break;
-      }
-      }
+    auto classST = classesST[i];
+    auto varST = classST.varList;
+    members = {
+        getLLVMTypeFromDJType(classST.className), //`this` pointer
+        getLLVMTypeFromDJType("nat")              // just an int for class ID
+    };
+    for (int j = 0; j < classST.numVars; j++) {
+      genericST[varST[j].varName] = nullptr;
+      members.push_back(getLLVMTypeFromDJType(varST[j].type));
     }
-    auto inherited = calculateInheritedStorageNeeds(classesST[i].superclass,
-                                                    allocatedClasses);
+    auto inherited =
+        calculateInheritedStorageNeeds(classST.superclass, allocatedClasses);
     members.insert(members.end(), inherited.begin(), inherited.end());
-    ret[classesST[i].className] = members;
+    ret[classST.className] = members;
+    NamedValues[classST.className] = genericST;
     members.clear();
-    NamedValues[typeString(i)] = genericST;
     genericST.clear();
   }
   return ret;
