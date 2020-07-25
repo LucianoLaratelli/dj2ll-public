@@ -2,12 +2,9 @@
 
 import os
 import sys
-import pprint
 from pygments import highlight
 from pygments.lexers import JavaLexer
 from pygments.formatters import Terminal256Formatter as T256F
-
-ignore_list = ["good30.dj"]
 
 undotted_method_call = ["good07.dj", "good15.dj", "good17.dj", "goodMine1.dj"]
 
@@ -19,9 +16,7 @@ null = ["good10.dj", "good27.dj", "good24.dj", "good29.dj", "good31.dj"]
 def main():
     if len(sys.argv) == 1:
         # test all programs except those we know don't work yet
-        files = sorted(
-            [f for f in os.listdir("test_programs/good") if f not in ignore_list]
-        )
+        files = sorted([f for f in os.listdir("test_programs/good")])
     elif sys.argv[1] == "um":
         files = undotted_method_call
     elif sys.argv[1] == "vt":

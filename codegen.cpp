@@ -17,6 +17,7 @@
 ** pointer to arise during code generation for one of the base cases would
 ** actually be caught by the LLVM API call itself.
 */
+// TODO: convert any GetElementPtrInst::Creates to Builder.CreateGEP calls
 
 #include "codegen.hpp"
 #include "codeGenClass.hpp"

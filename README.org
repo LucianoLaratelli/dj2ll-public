@@ -1,0 +1,118 @@
+#+OPTIONS: toc:nil
+#+LATEX_HEADER: \usepackage[margin=1.0in]{geometry}
+
+This repository contains the header files for a compiler front-end and
+the implementation files for a compiler backend built atop the LLVM C++
+API. The front-end implementation files are not public due to their
+being part of a graded project for the spring 2020 compilers elective at
+the University of South Florida; the professor requests that we keep
+those assignment private.
+
+The development of the LLVM-related code herein took place over the
+course of ten weeks, as part of an independent study assignment with
+supervision from Dr. Ligatti. The compiler translates the original AST
+(written in C) into one in C++, which is more amenable to the C++ API
+provided by LLVM. The compiler then walks the translated AST to generate
+an object file; =dj2ll= will call =clang= to deal with linking.
+
+** Significant differences from the =dj2dism= codebase
+   :PROPERTIES:
+   :CUSTOM_ID: significant-differences-from-the-dj2dism-codebase
+   :END:
+
+*** New Global Values
+    :PROPERTIES:
+    :CUSTOM_ID: new-global-values
+    :END:
+
+The =llvm_includes.hpp= file contains significant global variables used
+either by LLVM methods or by the code generation methods. The
+=NamedValues= map maps a string (representing methods and "main") to the
+appropriate symbol table that method should use. /This is a limitation
+of my approach!/ If a user declares a variable named (exactly)
+=C1_method_bar= and a class =C1= exists that implements a method =bar=,
+a colision will occur. Because the global number of DJ users is low, I
+felt this was an acceptable risk. (I get the feeling this is part of the
+reason why =clang= and =gcc= mangle function names...)
+
+*** LLAST
+    :PROPERTIES:
+    :CUSTOM_ID: llast
+    :END:
+
+The code in =llast.cpp= and its header file define the interface for the
+new AST. I opted to design the new AST as a series of =DJNodes=, of
+which =DJProgram= and =DJExpression= are the main child classes. All
+other DJ expression types are child classes that inherit from
+=DJExpression.= I chose early on to not translate the original symbol
+tables, which turned out to be a small mistake; it would have made much
+of code generation more simple to have translated these data structures
+into C++ as well.
+
+*** TranslateAST
+    :PROPERTIES:
+    :CUSTOM_ID: translateast
+    :END:
+
+The code in =translateAST.cpp= takes the validated AST produced by the
+typechecker and translates it into the LLAST.
+
+*** Code Generation
+    :PROPERTIES:
+    :CUSTOM_ID: code-generation
+    :END:
+
+The files =codegen.cpp= and =codeGenClass.cpp= contain =DJExpression=
+and =DJProgram= methods and related functions for code generation.
+
+**** Classes and their methods
+     :PROPERTIES:
+     :CUSTOM_ID: classes-and-their-methods
+     :END:
+
+I implemented classes as structs, with related methods implemented as
+methods that take a pointer to a particular structure. I laid out
+structs in memory like this (for some example class C):
+
+1. pointer to C (the =this= pointer)
+2. class ID (this is the same as the class' number in the =classesST= symbol
+   table)
+3. any fields
+
+This comes into play when accessing struct fields using LLVM's notorious
+[[https://llvm.org/docs/GetElementPtr.html][get element pointer]]
+instruction. To get the value of the first field declared in a struct,
+we would create a GEP using index (0,2), with the offset being for the
+=this= pointer and the class ID as layed out above.
+
+**** VTables
+      :PROPERTIES:
+      :CUSTOM_ID: vtables
+      :END:
+
+Due to the restrictions of the LLVM IR type system, I implemented
+virtual dispatch tables as nine separate functions, one for each of the
+possible pairs of return type and parameter type that can occur in DJ.
+When a return type or parameter type is a class, I casted the value to
+one of =Object= type. I confirmed that this would have no effect on
+accessing class fields later; a cast back to the original type is all
+that it took. When inside a VTable function, a chain of if/then/else
+statements accomplishes the dispatch.
+
+**** Method calls
+     :PROPERTIES:
+     :CUSTOM_ID: method-calls
+     :END:
+
+Once the VTable identifies the appropriate dynamic method, a method call
+occurs. Each method has its own symbol table; when the
+
+*** ITables
+    :PROPERTIES:
+    :CUSTOM_ID: itables
+    :END:
+
+I implemented instanceof tables in a manner similar to virtual dispatch
+tables; namely, a mess of chained if/then/else statements. The type
+system was not a concern here, and so there is only one ITable function
+in the resulting IR.
