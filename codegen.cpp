@@ -210,10 +210,10 @@ void emitVTable() {
   //  and then still access fields, call methods with the same pointer, etc.
 
   std::vector<Type *> functionArgs = {
-      PointerType::getUnqual(allocatedClasses["Object"]),
-      getLLVMTypeFromDJType("nat"), /*it's just an int*/
-      getLLVMTypeFromDJType("nat"), /*it's just an int*/
-      getLLVMTypeFromDJType(0)};
+      PointerType::getUnqual(allocatedClasses["Object"]), // original `this`
+      getLLVMTypeFromDJType("nat"), // just an int; static caller type
+      getLLVMTypeFromDJType("nat"), // just an int; static method number
+      getLLVMTypeFromDJType(0)};    // placeholder for original parameter
   llvm::FunctionType *VTableType;
   Function *VTableFunc;
   for (const std::string &returnType : {"nat", "bool", "Object"}) {
@@ -244,7 +244,7 @@ void emitVTable() {
                 // dynamic method symbol table
                 auto DMST = classesST[DC].methodList[DM];
                 if (DMST.paramType >= OBJECT_TYPE) {
-                  originalParam = Builder.CreatePointerBitCastOrAddrSpaceCast(
+                  originalParam = Builder.CreatePointerCast(
                       originalParam, getLLVMTypeFromDJType(DMST.paramType));
                 }
                 originalThis = Builder.CreatePointerCast(
