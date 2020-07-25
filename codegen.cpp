@@ -47,20 +47,6 @@ static std::map<std::string, llvm::StructType *> allocatedClasses;
 static std::map<std::string, std::vector<llvm::Type *>> classSizes;
 static std::unique_ptr<llvm::Module> TheModule;
 
-Type *getLLVMTypeFromDJType(int djType) {
-  switch (djType) {
-  case TYPE_BOOL: {
-    return Type::getInt1Ty(TheContext);
-  }
-  case TYPE_NAT: {
-    return Type::getInt32Ty(TheContext);
-  }
-  default: {
-    return PointerType::getUnqual(allocatedClasses[typeString(djType)]);
-  }
-  }
-}
-
 Type *getLLVMTypeFromDJType(std::string djType) {
   if (djType == "bool") {
     return Type::getInt1Ty(TheContext);
@@ -69,6 +55,10 @@ Type *getLLVMTypeFromDJType(std::string djType) {
   } else {
     return PointerType::getUnqual(allocatedClasses[djType]);
   }
+}
+
+Type *getLLVMTypeFromDJType(int djType) {
+  return getLLVMTypeFromDJType(std::string(typeString(djType)));
 }
 
 std::vector<Value *> getGEPIndex(std::string variable, int classID) {

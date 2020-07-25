@@ -1,6 +1,7 @@
 #ifndef CODEGEN_HPP
 #define CODEGEN_HPP
 
+#include "llvm_includes.hpp"
 #include "util.h"
 #include <fstream>
 
@@ -8,6 +9,9 @@ void generateLL(std::ofstream &outputFile);
 
 void codeGenExpr(ASTree *t, int classNumber, int methodNumber);
 void codeGenExprs(ASTree *expList, int classNumber, int methodNumber);
+
+llvm::Type *getLLVMTypeFromDJType(std::string djType);
+llvm::Type *getLLVMTypeFromDJType(int djType);
 
 extern ASTree *wholeProgram;
 // The expression list in the main block of the DJ program
@@ -20,4 +24,5 @@ extern VarDecl *mainBlockST;   // the array itself
 //   due to the always-present Object class
 extern int numClasses;       // size of the array
 extern ClassDecl *classesST; // the array itself
+
 #endif
