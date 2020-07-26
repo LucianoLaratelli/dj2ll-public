@@ -1,4 +1,6 @@
 /* File ast.h: Abstract-syntax-tree data structure for DJ */
+/*Copyright Dr. Ligatti, 2007 - 2020, USF*/
+/*Some modifications by Luciano Laratelli*/
 
 #ifndef AST_H
 #define AST_H

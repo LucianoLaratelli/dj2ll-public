@@ -1,4 +1,5 @@
 /* File typecheck.h: Typechecker for DJ */
+/*Copyright Dr. Ligatti, 2007 - 2020, USF*/
 
 #ifndef TYPECHECK_H
 #define TYPECHECK_H
