@@ -312,27 +312,14 @@ void emitVTable() {
   }
 }
 
-void generateMethodST(int classNum, int methodNum, int inheritedFrom = 0) {
+void generateMethodST(int classNum, int methodNum) {
   // generate symbol tables of LLVM types from the old symbol tables generated
   // in symbtbl.c for the requested method.
 
-  // methods are stored as "<declaring_class>_method_<method_name>" because a
-  // class and its superclass can declare methods with the same name. you may
-  // also notice that the global NamedValues symbol table allows for collisions
-  // between class and method names; the naming scheme designed above prevents
-  // this
   std::map<std::string, llvm::AllocaInst *> genericSymbolTable;
   auto classDecl = classesST[classNum];
   auto className = std::string(classDecl.className);
-  MethodDecl method;
-  if (inheritedFrom == 0) {
-    method = classDecl.methodList[methodNum];
-  } else {
-    method = classesST[inheritedFrom].methodList[methodNum];
-  }
-  // note that we keep the original class name here, even if the method itself
-  // is inherited from another class. I opted to do it this way to have it be
-  // explicit in the IR, but there's no real benefit there.
+  MethodDecl method = classDecl.methodList[methodNum];
   auto methodName = className + "_method_" + method.methodName;
   Function *LLMethod = TheModule->getFunction(methodName);
   genericSymbolTable["this"] =
@@ -404,36 +391,28 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
   }
 
   for (int i = 0; i < numClasses; i++) {
-    // emit method declarations, both for the methods declared by this class and
-    // by the methods any of its superclasses declare. Remember that a method
-    // can override superclass methods; that's the purpose for the nullptr check
-    // here: if the method already exists in the symbol table we have no need
-    // for it. It's critical to emit all method declarations before any method
-    // definitions are emitted, because a method body may contain any method
-    // declared in the program.
+    // emit method declarations
     std::vector<Type *> functionArgs;
     llvm::FunctionType *methodType;
     auto classST = classesST[i];
     auto declaredClass = std::string(classST.className);
-    while (classST.superclass != NO_OBJECT) {
-      for (int j = 0; j < classST.numMethods; j++) {
-        auto methodST = classST.methodList[j];
-        auto methodName = declaredClass + "_method_" + methodST.methodName;
-        if (TheModule->getFunction(methodName) == nullptr) {
-          functionArgs = {getLLVMTypeFromDJType(declaredClass),
-                          getLLVMTypeFromDJType(methodST.paramType)};
-          methodType = FunctionType::get(
-              getLLVMTypeFromDJType(methodST.returnType), functionArgs, false);
-          Function::Create(methodType, llvm::Function::ExternalLinkage,
-                           methodName, TheModule.get());
-        }
+    for (int j = 0; j < classST.numMethods; j++) {
+      auto methodST = classST.methodList[j];
+      auto methodName = declaredClass + "_method_" + methodST.methodName;
+      if (TheModule->getFunction(methodName) == nullptr) {
+        functionArgs = {getLLVMTypeFromDJType(declaredClass),
+                        getLLVMTypeFromDJType(methodST.paramType)};
+        methodType = FunctionType::get(
+            getLLVMTypeFromDJType(methodST.returnType), functionArgs, false);
+        Function::Create(methodType, llvm::Function::ExternalLinkage,
+                         methodName, TheModule.get());
       }
-      classST = classesST[classST.superclass];
     }
+    classST = classesST[classST.superclass];
   }
   emitVTable();
-  // define methods declared in this class
 
+  // emit method definitions
   for (int i = 0; i < numClasses; i++) {
     auto classST = classesST[i];
     auto declaredClass = std::string(classST.className);
@@ -452,30 +431,6 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
             last, getLLVMTypeFromDJType(methodST.returnType));
       }
       Builder.CreateRet(last);
-    }
-    auto superClass = classesST[i].superclass;
-    while (superClass != NO_OBJECT) {
-      // define methods we inherited from superclasses
-      for (int j = 0; j < classesST[superClass].numMethods; j++) {
-        auto methodST = classesST[superClass].methodList[j];
-        auto methodName = declaredClass + "_method_" + methodST.methodName;
-        auto method = TheModule->getFunction(methodName);
-        if (method == nullptr) {
-          Builder.SetInsertPoint(createBB(method, "entry"));
-          generateMethodST(i, j, superClass);
-          Value *last = nullptr;
-          for (const auto &e : translateExprList(methodST.bodyExprs)) {
-            last = e->codeGen(NamedValues[methodName]);
-          }
-          if (methodST.returnType >= OBJECT_TYPE) {
-            Builder.CreateRet(Builder.CreatePointerCast(
-                last, getLLVMTypeFromDJType(methodST.returnType)));
-          } else {
-            Builder.CreateRet(last);
-          }
-        }
-      }
-      superClass = classesST[superClass].superclass;
     }
   }
 
@@ -542,7 +497,7 @@ Function *DJProgram::codeGen(symbolTable ST, int type) {
     errs() << Error;
     exit(-1);
   }
-  auto CPU = sys::getHostCPUName();
+  std::string CPU = sys::getHostCPUName();
   std::string Features = "";
   StringMap<bool> HostFeatures;
   if (!sys::getHostCPUFeatures(HostFeatures)) {
