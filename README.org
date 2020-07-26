@@ -8,6 +8,11 @@ front-end implementation files are not public due to their being part of a
 graded project for the [[https://www.cse.usf.edu/~ligatti/compilers/20/][spring 2020 compilers elective]] at the University of South
 Florida; [[https://www.cse.usf.edu/~ligatti/][the professor]] requests that we keep those assignment private.
 
+The source language for this compiler is Diminished Java (DJ), a language
+devised by Dr. Ligatti specifically for his compilers course. [[https://github.com/LucianoLaratelli/dj2ll-public/blob/master/DJ_spec.pdf][His language
+documentation]] contains more information about the features and capabilities of
+DJ.
+
 The development of the LLVM-related code herein took place over the course of
 ten weeks, as part of an independent study assignment with supervision from Dr.
 Ligatti. The compiler translates the original AST (written in C) into one in
@@ -15,13 +20,26 @@ C++, which is more amenable to the C++ API provided by LLVM. The compiler then
 walks the translated AST to generate an object file; =dj2ll= calls =clang= to
 deal with linking.
 
-The files provided here include
+The files provided here include:
 1. Header and implementation files for all LLVM-related work (=codeGen*= files),
 2. Header files of my own design (the implementation of these deals directly
    with the original AST, so they remain private),
-2. Header files provided by Dr. Ligatti to guide the design of the original compiler,
-3. Test programs provided by Dr. Ligatti, and
-4. A Python script to run the compiler against the test programs.
+3. Header files provided by Dr. Ligatti to guide the design of the original compiler,
+4. Test programs provided by Dr. Ligatti, and
+5. A Python script to run the compiler against the test programs.
+
+
+* Running the Compiler
+The [[https://github.com/LucianoLaratelli/dj2ll-public/releases][releases]] tab provides an executable version of =dj2ll=. I built the
+executable using Version 10.0.1 of =clang= and =clang++= on Arch Linux; it works
+on Ubuntu as well. =dj2ll= knows about three flags:
+1. =--skip-codegen=: lex, parse, and typecheck, but skip code generation.
+2. =--run-optis=: create an optimized executable.
+3. =--emit-llvm=: output to the console the LLVM IR produced by the source file.
+4. =--verbose=: output the translated AST.
+
+If you run =dj2ll= on some file test.dj, it will produce an executable with name
+=test= in the same directory from which you called the compiler.
 
 * Design choices and areas of note
 
