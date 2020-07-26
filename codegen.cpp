@@ -3,21 +3,24 @@
 **
 ** This file implements all of the codeGen methods for the expression nodes of
 ** the LLAST. It also handles codeGen for an entire DJProgram:
+**
 **     * setting up runtime functions, vtables, itables
 **     * verifying the generated IR Module
 **     * emitting object code to a target file whose name is the same as the
 **       source file but with a .o extension
+**     * calling clang using `system` to link the object file into an
+**       executable of the same name as the source program
+**
 ** In contrast to the LLVM Kaleidoscope tutorial, I have opted to not perform
 ** null checks on any of the expressions. This is a deliberate choice to keep
 ** the code cleaner; I don't believe any safety is sacrificed because all of the
-** base cases for the recursion (DOT_IDs, IDs, INSTANCEOFs, READs, THISs, NEWs,
-** NULLs, NAT_LITERALs, TRUE_LITERALs, and FALSE_LITERALs) depend on directly
-** utilizing LLVM API calls or the symbol table. Errors in the symbol table are
-** caught during type checking; I expect that a failure that would cause a null
-** pointer to arise during code generation for one of the base cases would
-** actually be caught by the LLVM API call itself.
+** base cases for the recursion (IDs, READs, THISs, NEWs, NULLs, NAT_LITERALs,
+** TRUE_LITERALs, and FALSE_LITERALs) depend on directly utilizing LLVM API
+** calls or the symbol table. Errors in the symbol table are caught during type
+** checking; I expect that a failure that would cause a null pointer to arise
+** during code generation for one of the base cases would actually be caught by
+** the LLVM API call itself.
 */
-// TODO: convert any GetElementPtrInst::Creates to Builder.CreateGEP calls
 
 #include "codegen.hpp"
 #include "codeGenClass.hpp"
@@ -70,12 +73,14 @@ std::vector<Value *> getGEPIndex(std::string variable, int classID) {
 }
 
 std::vector<Value *> getThisIndex() {
+  // return the index in a struct of its `this` pointer
   std::vector<Value *> ret = {ConstantInt::get(TheContext, APInt(32, 0)),
                               ConstantInt::get(TheContext, APInt(32, 0))};
   return ret;
 }
 
 std::vector<Value *> getGEPID() {
+  // return the index in a struct of its class ID
   std::vector<Value *> ret = {ConstantInt::get(TheContext, APInt(32, 0)),
                               ConstantInt::get(TheContext, APInt(32, 1))};
   return ret;
@@ -879,21 +884,14 @@ Value *DJNew::codeGen(symbolTable ST, int type) {
       PointerType::getUnqual(allocatedClasses[assignee]), nullptr, "temp");
   Builder.CreateStore(Builder.Insert(I), ST["temp"]);
 
-  std::vector<Value *> elementIndex = {
-      ConstantInt::get(TheContext, APInt(32, 0)),
-      ConstantInt::get(TheContext, APInt(32, 0))};
-  // get pointer to zeroth element in the struct, which is the `this` pointer
-  auto thisPtr = GetElementPtrInst::Create(
-      allocatedClasses[assignee], Builder.CreateLoad(ST["temp"]), elementIndex);
-  // store the result of malloc as `this`
-  Builder.CreateStore(Builder.CreateLoad(ST["temp"]), Builder.Insert(thisPtr));
-  // get pointer to the 1th element in the struct, which holds its class ID
-  elementIndex[1] = ConstantInt::get(TheContext, APInt(32, 1));
-  auto classID = GetElementPtrInst::Create(
-      allocatedClasses[assignee], Builder.CreateLoad(ST["temp"]), elementIndex);
-  Builder.CreateStore(ConstantInt::get(TheContext, APInt(32, this->classID)),
-                      Builder.Insert(classID));
-
+  // store the result of malloc in the new struct's `this` pointer
+  Builder.CreateStore(
+      Builder.CreateLoad(ST["temp"]),
+      Builder.CreateGEP(Builder.CreateLoad(ST["temp"]), getThisIndex()));
+  // store the object's class in the appropriate place
+  Builder.CreateStore(
+      ConstantInt::get(TheContext, APInt(32, this->classID)),
+      Builder.CreateGEP(Builder.CreateLoad(ST["temp"]), getGEPID()));
   return I;
 }
 
@@ -909,11 +907,8 @@ Value *DJDotId::codeGen(symbolTable ST, int type) {
     return Builder.CreateLoad(GlobalValues[actualID]);
   } else {
     auto IDIndex = getGEPIndex(ID, staticClassNum);
-    auto I =
-        GetElementPtrInst::Create(allocatedClasses[typeString(staticClassNum)],
-                                  objectLike->codeGen(ST), IDIndex);
-    Builder.Insert(I);
-    return Builder.CreateLoad(I);
+    return Builder.CreateLoad(
+        Builder.CreateGEP(objectLike->codeGen(ST), IDIndex));
   }
 }
 
