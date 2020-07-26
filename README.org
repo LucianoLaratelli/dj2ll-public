@@ -99,7 +99,66 @@ of return type and parameter type that can occur in DJ. When a return type or
 parameter type is a class, I casted the value to one of =Object= type. I
 confirmed that this would have no effect on accessing class fields later; a cast
 back to the original type is all that it took. When inside a VTable function, a
-chain of if/then/else statements accomplishes the dispatch.
+chain of if/then/else statements accomplishes the dispatch. Even for the two DJ
+class declarations below, the VTable becomes verbose:
+#+BEGIN_SRC java
+class C1 extends Object {
+  nat whoami(nat unused) { printNat(1); }
+}
+
+class C2 extends C1 {
+  nat whoami(nat unused) { printNat(2); }
+}
+#+END_SRC
+#+BEGIN_SRC LLVM
+define i32 @natVTablenat(%Object* %0, i32 %1, i32 %2, i32 %3) {
+entry:
+  %4 = bitcast %Object* %0 to %C1*
+  %5 = getelementptr %C1, %C1* %4, i32 0, i32 1
+  %6 = load i32, i32* %5
+  %7 = icmp eq i32 %1, 1
+  %8 = icmp eq i32 %6, 1
+  %9 = and i1 %7, %8
+  %10 = icmp eq i32 %2, 0
+  %11 = and i1 %9, %10
+  br i1 %11, label %then, label %else
+
+then:                                             ; preds = %entry
+  %12 = call i32 @C1_method_whoami(%C1* %4, i32 %3)
+  ret i32 %12
+
+else:                                             ; preds = %entry
+  %13 = bitcast %C1* %4 to %C2*
+  %14 = getelementptr %C2, %C2* %13, i32 0, i32 1
+  %15 = load i32, i32* %14
+  %16 = icmp eq i32 %1, 1
+  %17 = icmp eq i32 %15, 2
+  %18 = and i1 %16, %17
+  %19 = icmp eq i32 %2, 0
+  %20 = and i1 %18, %19
+  br i1 %20, label %then1, label %else2
+
+then1:                                            ; preds = %else
+  %21 = call i32 @C2_method_whoami(%C2* %13, i32 %3)
+  ret i32 %21
+
+else2:                                            ; preds = %else
+  %22 = getelementptr %C2, %C2* %13, i32 0, i32 1
+  %23 = load i32, i32* %22
+  %24 = icmp eq i32 %1, 2
+  %25 = icmp eq i32 %23, 2
+  %26 = and i1 %24, %25
+  %27 = icmp eq i32 %2, 0
+  %28 = and i1 %26, %27
+  br i1 %28, label %then3, label %else4
+
+then3:                                            ; preds = %else2
+  %29 = call i32 @C2_method_whoami(%C2* %13, i32 %3)
+  ret i32 %29
+
+else4:                                            ; preds = %else2
+  ret i32 0
+#+END_SRC
 
 *** ITables
 
