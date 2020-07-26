@@ -8,7 +8,7 @@
 
 int main(int argc, char **argv) {
   std::vector<std::string> availableFlags = {"--skip-codegen", "--run-optis",
-                                             "emit-llvm", "--verbose"};
+                                             "--emit-llvm", "--verbose"};
   std::map<std::string, bool> compilerFlags;
   compilerFlags["codegen"] = true;
   compilerFlags["optimizations"] = false;
