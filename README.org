@@ -31,8 +31,9 @@ The files provided here include:
 
 * Running the Compiler
 The [[https://github.com/LucianoLaratelli/dj2ll-public/releases][releases]] tab provides an executable version of =dj2ll=. I built the
-executable using Version 10.0.1 of =clang= and =clang++= on Arch Linux; it works
-on Ubuntu as well. =dj2ll= knows about three flags:
+executable using Version 10.0.1 of =clang= and =clang++= on Arch Linux. The
+compiler should work on any Linux system that has access to =clang= and the LLVM
+libraries. =dj2ll= knows about four flags:
 1. =--skip-codegen=: lex, parse, and typecheck, but skip code generation.
 2. =--run-optis=: create an optimized executable.
 3. =--emit-llvm=: output to the console the LLVM IR produced by the source file.
@@ -79,16 +80,16 @@ and =DJProgram= methods and related helper functions for code generation.
 I implemented classes as structs, with their methods implemented as functions
 that take a pointer to a particular structure. I laid out structs in memory like
 this (for some example class C):
-
 1. pointer to C (the =this= pointer)
 2. class ID (this is the same as the class' number in the =classesST= symbol
    table)
 3. any fields
 
-This comes into play when accessing struct fields using LLVM's notorious [[https://llvm.org/docs/GetElementPtr.html][get
-element pointer]] instruction. To get the value of the first field declared in a
-struct, we would create a GEP using index (0,2), with the offset being for the
-=this= pointer and the class ID as layed out above.
+This comes into play when accessing struct fields using LLVM's notorious
+[[https://llvm.org/docs/GetElementPtr.html][get element pointer]] instruction.
+To get the value of the first field declared in a struct, we would create a GEP
+using index (0,2), with the offset being for the =this= pointer and the class ID
+as layed out above.
 
 *** VTables
 
@@ -100,7 +101,7 @@ confirmed that this would have no effect on accessing class fields later; a cast
 back to the original type is all that it took. When inside a VTable function, a
 chain of if/then/else statements accomplishes the dispatch.
 
-** ITables
+*** ITables
 
 I implemented instanceof tables in a manner similar to virtual dispatch tables;
 namely, a mess of chained if/then/else statements. The type system was not a
