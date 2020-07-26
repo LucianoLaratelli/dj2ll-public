@@ -31,7 +31,7 @@ typedef enum {
   /*`B:` denotes a base case in the recursion*/
   DOT_METHOD_CALL_EXPR, /* E.ID(E) */
   METHOD_CALL_EXPR,     /* ID(E) */
-  DOT_ID_EXPR,          /* B: E.ID */
+  DOT_ID_EXPR,          /* E.ID */
   ID_EXPR,              /* B: ID */
   DOT_ASSIGN_EXPR,      /* E.ID = E */
   ASSIGN_EXPR,          /* ID = E */
@@ -42,7 +42,7 @@ typedef enum {
   GREATER_THAN_EXPR,    /* E > E */
   NOT_EXPR,             /* !E */
   AND_EXPR,             /* E&&E */
-  INSTANCEOF_EXPR,      /* B: E instanceof ID */
+  INSTANCEOF_EXPR,      /* E instanceof ID */
   IF_THEN_ELSE_EXPR,    /* if(E) {Es} else {Es} */
   FOR_EXPR,             /* for(E;E;E) {Es} */
   PRINT_EXPR,           /* printNat(E) */
