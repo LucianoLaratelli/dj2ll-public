@@ -3,10 +3,10 @@
 * dj2ll
 
 This repository contains the header files for a compiler front-end and the
-implementation files for a compiler backend built atop the LLVM C++ API. The
+implementation files for a compiler back-end built atop the LLVM C++ API. The
 front-end implementation files are not public due to their being part of a
 graded project for the [[https://www.cse.usf.edu/~ligatti/compilers/20/][spring 2020 compilers elective]] at the University of South
-Florida; [[https://www.cse.usf.edu/~ligatti/][the professor]] requests that we keep those assignment private.
+Florida; [[https://www.cse.usf.edu/~ligatti/][the professor]] requests that we keep those assignments private.
 
 The source language for this compiler is Diminished Java (DJ), a language
 devised by Dr. Ligatti specifically for his compilers course. [[https://github.com/LucianoLaratelli/dj2ll-public/blob/master/DJ_spec.pdf][His language
